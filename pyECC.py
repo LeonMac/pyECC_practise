@@ -69,7 +69,7 @@ class ECP:
 
 
     def is_reverse(self, Q, p):
-        if (self.x_ == Q.x) and (self.y_ == p - Q.y):
+        if (self.x_ == Q.x_) and (self.y_ == p - Q.y_):
             return True
 
     def print_point(self, mode):
@@ -118,7 +118,7 @@ class ECC:
         x = P.x_
         y = P.y_
 
-        #slope m
+        # slope m
         m = ( 3*x**2    ) % self.p_
         m = (m + self.a_) % self.p_
         div = modular_inverse(2*y, self.p_)
@@ -132,15 +132,29 @@ class ECC:
         return R
 
 
-    # def Point_Add (self, P: ECP, Q: ECP):
-    #     '''calculate R = P+Q'''
-    #     if Q.is_infinite_point():
-    #         return P
-    #     if P.is_infinite_point():
-    #         return Q
-    #     if Q.is_reverse(P, self.p_):
-    #         return ECP(0,0)
-    #  To Be Added..
+    def Point_Add (self, P: ECP, Q: ECP):
+        '''calculate R = P + Q '''
+        if Q.is_infinite_point():
+            return P
+        if P.is_infinite_point():
+            return Q
+        if Q.is_reverse(P, self.p_):
+            ret = (0, 0)
+            return ECP(ret)
+        # slope m
+        m = (P.y_ - Q.y_) % self.p_
+        div = modular_inverse(P.x_ - Q.x_, self.p_)
+        m = m*div % self.p_
+
+        xo = (m**2 - P.x_ - Q.x_)    % self.p_
+        yo = (P.y_ + m*(xo - P.x_) ) % self.p_
+
+        Point_Out = (xo, yo)
+        T = ECP( Point_Out )
+        R = T.neg_point(self.p_)
+        return R
+        
+
     
 
 ################################################
@@ -171,9 +185,12 @@ G = ECP(G)
 secp256k1 = ECC(a,b,n,p,G,714, "secp256k1")
 
 #unit test: Point Double
-P = secp256k1.Point_Dbl(G)
-P.print_point('hex')
-P.print_point('dec')
+dG = secp256k1.Point_Dbl(G)
+dG.print_point('hex')
+dG.print_point('dec')
 
-
+#unit test: Point Add: 2G+G = 3G
+tG = secp256k1.Point_Add(dG, G)
+tG.print_point('hex')
+tG.print_point('dec')
 
