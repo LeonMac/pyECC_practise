@@ -63,6 +63,11 @@ class ECP:
             return True
         else:
             return False
+    def neg_point(self, mod):
+        ret = (self.x_, mod - self.y_)
+        return ECP(ret)
+
+
     def is_reverse(self, Q, p):
         if (self.x_ == Q.x) and (self.y_ == p - Q.y):
             return True
@@ -117,13 +122,14 @@ class ECC:
         m = ( 3*x**2    ) % self.p_
         m = (m + self.a_) % self.p_
         div = modular_inverse(2*y, self.p_)
-
         m = m*div % self.p_
 
-        xo = (m**2 - x - x) % self.p_
+        xo = (m**2 - x - x)    % self.p_
         yo = (y + m*(xo - x) ) % self.p_
-        doubled = (xo, yo)
-        return ECP(doubled)
+        Point_Out = (xo, yo)
+        T = ECP( Point_Out )
+        R = T.neg_point(self.p_)
+        return R
 
 
     # def Point_Add (self, P: ECP, Q: ECP):
