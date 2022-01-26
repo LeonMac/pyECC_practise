@@ -1,3 +1,7 @@
+''' python version need > 3.5'''
+
+from random import SystemRandom # cryptographic random byte generator
+rand = SystemRandom()
 
 ## common lib
 
@@ -17,24 +21,59 @@ def modular_inverse(a, m):
 		raise ValueError
 	return x % m
 
+def modular_exp_inv(a, m):
+	''' compute the multiplicative inverse, by doing python native modulo exponentiation'''
+	return pow(a, m-2, m)
+
+def mod_inv_unittest (iteration):
+    x = rand.randint(1, (1<<256)-1 )
+    m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+
+    iter = 0
+    pass_test = 0
+    while iter < iteration:
+        mod0 = modular_inverse (x, m)
+        mod1 = modular_exp_inv (x, m)
+        same = (mod0 == mod1)
+        if not same:
+            print("iteration #", iter, "fail: " )
+            print("x   : 0x%064x" %(x) )
+            print("m   : 0x%064x" %(m) )
+            print("mod0: 0x%064x" %(mod0) )
+            print("mod1: 0x%064x" %(mod1) )  
+
+            print("  " )
+        else: pass_test += 1
+        iter += 1
+
+    return pass_test
+
 ###################################################
 class ECP:
     ''' EC point class, affine coordinate'''
-    def __init__(self, x, y):
-        self.x_ = x
-        self.y_ = y
+    def __init__(self, P):
+        "P must be tuple of (x, y)"
+        self.x_ = P[0]
+        self.y_ = P[1]
         if self.is_infinite_point():
-            print ("You get infinite point!")
+            print ("This is an infinite point!")
 
     def is_infinite_point(self):
         if self.x_ == 0 and self.x_ == 0:
             return True
         else:
             return False
+    def is_reverse(self, Q, p):
+        if (self.x_ == Q.x) and (self.y_ == p - Q.y):
+            return True
 
-    def print_point(self ):
-        print("Point.x(affine): ", hex( self.x_ ) )
-        print("Point.y(affine): ", hex( self.y_ ) )
+    def print_point(self, mode):
+        if mode == 'hex':
+            print("Point.x(affine): ", hex( self.x_ ) )
+            print("Point.y(affine): ", hex( self.y_ ) )
+        elif mode == 'dec':
+            print("Point.x(affine): ", self.x_ ) 
+            print("Point.y(affine): ", self.y_ )
 
 
 class ECC:
@@ -56,19 +95,56 @@ class ECC:
         if self.ECP_on_curve(G):
             print ("EC Curve: ", self.name, "init done" )
 
-
     def ECP_on_curve(self, P: ECP):
         left  = (P.y_** 2) % self.p_
         right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
         on_curve = (left == right)
         if not on_curve:
             print ("Priovided Point is NOT on curve: ")
-            P.print_point()
+            P.print_point('hex')
 
         return on_curve
+    
+    # def cal_slope0():
+    #     '''when P and Q are same points, i.e. for Point double'''
+
+    def Point_Dbl (self, P: ECP):
+        '''calculate R = P + P = 2P'''
+        x = P.x_
+        y = P.y_
+
+        #slope m
+        m = ( 3*x**2    ) % self.p_
+        m = (m + self.a_) % self.p_
+        div = modular_inverse(2*y, self.p_)
+
+        m = m*div % self.p_
+
+        xo = (m**2 - x - x) % self.p_
+        yo = (y + m*(xo - x) ) % self.p_
+        doubled = (xo, yo)
+        return ECP(doubled)
+
+
+    # def Point_Add (self, P: ECP, Q: ECP):
+    #     '''calculate R = P+Q'''
+    #     if Q.is_infinite_point():
+    #         return P
+    #     if P.is_infinite_point():
+    #         return Q
+    #     if Q.is_reverse(P, self.p_):
+    #         return ECP(0,0)
+    #  To Be Added..
+    
 
 ################################################
 ## main ##
+
+# unit test: modulo inverse 
+iter = 100
+ret = mod_inv_unittest(iter)
+print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
+print ("=====================================")
 
 # secp256k1 parameters
 a  = 0
@@ -83,5 +159,15 @@ p  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 #Quick verify if (Gx, Gy) is on secp256k1 curve:
 Gy**2 % p == (Gx**3 + Gx*a + b) % p
 
-G = ECP(Gx, Gy)
-secp256k1_curve = ECC(a,b,n,p,G,714, "secp256k1")
+#init the curve:
+G = (Gx, Gy) 
+G = ECP(G)
+secp256k1 = ECC(a,b,n,p,G,714, "secp256k1")
+
+#unit test: Point Double
+P = secp256k1.Point_Dbl(G)
+P.print_point('hex')
+P.print_point('dec')
+
+
+
