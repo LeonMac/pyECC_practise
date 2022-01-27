@@ -49,6 +49,7 @@ def mod_inv_unittest (iteration):
     return pass_test
 
 ###################################################
+
 class ECP:
     ''' EC point class, affine coordinate'''
     def __init__(self, P):
@@ -59,18 +60,18 @@ class ECP:
             print ("This is an infinite point!")
 
     def is_infinite_point(self):
-        if self.x_ == 0 and self.x_ == 0:
+        if self.x_ == 0 and self.y_ == 0:
             return True
         else:
             return False
-    def neg_point(self, mod):
-        ret = (self.x_, mod - self.y_)
-        return ECP(ret)
-
 
     def is_reverse(self, Q, p):
         if (self.x_ == Q.x_) and (self.y_ == p - Q.y_):
             return True
+    
+    def neg_point(self, mod):
+        ret = (self.x_, mod - self.y_)
+        return ECP(ret)
 
     def print_point(self, mode):
         if mode == 'hex':
@@ -133,7 +134,7 @@ class ECC:
 
 
     def Point_Add (self, P: ECP, Q: ECP):
-        '''calculate R = P + Q '''
+        '''calculate R = P + Q, when P != Q '''
         if Q.is_infinite_point():
             return P
         if P.is_infinite_point():
@@ -153,6 +154,38 @@ class ECC:
         T = ECP( Point_Out )
         R = T.neg_point(self.p_)
         return R
+
+    def Point_Add_General (self, P: ECP, Q: ECP):
+        '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
+        if Q.is_infinite_point():
+            return P
+        if P.is_infinite_point():
+            return Q
+        if Q.is_reverse(P, self.p_):
+            ret = (0, 0)
+            return ECP(ret)
+        
+        if P == Q:
+        # slope m for Dbl
+            m = ( 3 * P.x_**2  ) % self.p_
+            m = ( m + self.a_  ) % self.p_
+            div = modular_inverse(2*P.y_, self.p_)
+            m = m*div % self.p_
+
+        else: 
+        # slope m for Add
+            m = ( P.y_ - Q.y_  ) % self.p_
+            div = modular_inverse(P.x_ - Q.x_, self.p_)
+            m = m*div % self.p_
+
+        # common for Output point:
+        xo = ( m**2 - P.x_ - Q.x_  ) % self.p_
+        yo = (P.y_ + m*(xo - P.x_) ) % self.p_
+
+        Point_Out = (xo, yo)
+        T = ECP( Point_Out )
+        R = T.neg_point(self.p_)
+        return R
         
 
     
@@ -160,7 +193,7 @@ class ECC:
 ################################################
 ## main ##
 
-# unit test: modulo inverse 
+# unit test: modular inverse 
 iter = 100
 ret = mod_inv_unittest(iter)
 print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
@@ -180,17 +213,47 @@ p  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 Gy**2 % p == (Gx**3 + Gx*a + b) % p
 
 #init the curve:
-G = (Gx, Gy) 
-G = ECP(G)
+pG = (Gx, Gy)
+G = ECP(pG)
+pI = (0, 0)
+I = ECP(pI)
+
 secp256k1 = ECC(a,b,n,p,G,714, "secp256k1")
 
 #unit test: Point Double
+print ("Point Double unit test: dG = G+G")
 dG = secp256k1.Point_Dbl(G)
-dG.print_point('hex')
+# dG.print_point('hex')
 dG.print_point('dec')
+print ("=====================================")
 
 #unit test: Point Add: 2G+G = 3G
+print ("Point Add unit test: tG = dG+G")
 tG = secp256k1.Point_Add(dG, G)
-tG.print_point('hex')
+# tG.print_point('hex')
 tG.print_point('dec')
+print ("=====================================")
 
+#unit test: Point Add: P+ (-P) = Unit(0,0)
+print ("Point Add unit test: Unit(0,0) = tG+tGn")
+tGn = tG.neg_point(p)
+Unit = secp256k1.Point_Add(tG, tGn)
+Unit.print_point('hex')
+# Unit.print_point('dec')
+print ("=====================================")
+
+#unit test: Point Add General: P+ (-P) = Unit(0,0)
+print ("Point Add General unit test 0: dG = G + G")
+dG = secp256k1.Point_Add_General(G, G)
+dG.print_point('dec')
+print ("Point Add General unit test 1: tG = dG + G")
+tG = secp256k1.Point_Add_General(dG, G)
+tG.print_point('dec')
+print ("Point Add General unit test 2: tG = tG + Uint")
+tG_plus_I = secp256k1.Point_Add_General(tG, I)
+tG_plus_I.print_point('dec')
+print ("Point Add General unit test 3: Unit = tG + tGn")
+tGn = tG.neg_point(p)
+tG_plus_tGn = secp256k1.Point_Add_General(tG, tGn)
+tG_plus_tGn.print_point('dec')
+print ("=====================================")
