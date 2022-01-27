@@ -15,11 +15,13 @@ def half_extended_gcd(aa, bb):
 	return lastrem, lastx 
 
 def modular_inverse(a, m):
-	''' compute the multiplicative inverse, i.e. for x*a = a*x = 1 (mod m), return x '''
-	g, x = half_extended_gcd(a, m)
-	if g != 1:
-		raise ValueError
-	return x % m
+    ''' compute the multiplicative inverse, i.e. for x*a = a*x = 1 (mod m), return x '''
+    assert a>0 , "The operator value a must be >0 for this pllication"
+    g, x = half_extended_gcd(a, m)
+    if g != 1:
+        raise ValueError
+    
+    return x % m
 
 def modular_exp_inv(a, m):
 	''' compute the multiplicative inverse, by doing python native modulo exponentiation'''
@@ -56,10 +58,10 @@ class ECP:
         "P must be tuple of (x, y)"
         self.x_ = P[0]
         self.y_ = P[1]
-        if self.is_infinite_point():
-            print ("This is an infinite point!")
+        if self.is_Unit_Point():
+            print ("This is the Unit Point!")
 
-    def is_infinite_point(self):
+    def is_Unit_Point(self):
         if self.x_ == 0 and self.y_ == 0:
             return True
         else:
@@ -81,17 +83,19 @@ class ECP:
             print("Point.x(affine): ", self.x_ ) 
             print("Point.y(affine): ", self.y_ )
 
+Unit = ECP ( (0,0) )
 
 class ECC:
     '''EC curve'''
-    def __init__(self, a, b, n, p, G:ECP, c_id, name):
+    def __init__(self, a, b, n, p, G:ECP, curve_id, name):
         self.a_ = a
         self.b_ = b
         self.n_ = n
 
         self.p_ = p
         self.G_ = G
-        self.id_= c_id
+
+        self.id_= curve_id
         self.name = name
 
         ### todo: check valid ###
@@ -132,21 +136,26 @@ class ECC:
         R = T.neg_point(self.p_)
         return R
 
-
     def Point_Add (self, P: ECP, Q: ECP):
         '''calculate R = P + Q, when P != Q '''
-        if Q.is_infinite_point():
+        if Q.is_Unit_Point():
             return P
-        if P.is_infinite_point():
+        if P.is_Unit_Point():
             return Q
         if Q.is_reverse(P, self.p_):
-            ret = (0, 0)
-            return ECP(ret)
-        # slope m
-        m = (P.y_ - Q.y_) % self.p_
-        div = modular_inverse(P.x_ - Q.x_, self.p_)
-        m = m*div % self.p_
+            return Unit
 
+        # slope m
+        m = ( P.y_ - Q.y_  ) % self.p_
+            
+        t2 = (P.x_ - Q.x_) % self.p_
+        if t2 < 0:
+            div = modular_inverse(t2+self.p_, self.p_)
+        else:
+            div = modular_inverse(t2, self.p_)
+        
+        m = m*div % self.p_
+        
         xo = (m**2 - P.x_ - Q.x_)    % self.p_
         yo = (P.y_ + m*(xo - P.x_) ) % self.p_
 
@@ -157,13 +166,12 @@ class ECC:
 
     def Point_Add_General (self, P: ECP, Q: ECP):
         '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
-        if Q.is_infinite_point():
+        if Q.is_Unit_Point():
             return P
-        if P.is_infinite_point():
+        if P.is_Unit_Point():
             return Q
         if Q.is_reverse(P, self.p_):
-            ret = (0, 0)
-            return ECP(ret)
+            return Unit
         
         if P == Q:
         # slope m for Dbl
@@ -174,19 +182,61 @@ class ECC:
 
         else: 
         # slope m for Add
+            # t1 = ( P.y_ - Q.y_  ) % self.p_
+            # if t1 < 0:
+            #     m = t1 + self.p_
+            # else:
+            #     m = t1
             m = ( P.y_ - Q.y_  ) % self.p_
-            div = modular_inverse(P.x_ - Q.x_, self.p_)
+            
+            t2 = (P.x_ - Q.x_) % self.p_
+            if t2 < 0:
+                div = modular_inverse(t2+self.p_, self.p_)
+            else:
+                div = modular_inverse(t2, self.p_)
             m = m*div % self.p_
 
         # common for Output point:
         xo = ( m**2 - P.x_ - Q.x_  ) % self.p_
+        if xo < 0:
+            xo += self.p_
         yo = (P.y_ + m*(xo - P.x_) ) % self.p_
+        if yo < 0:
+            yo += self.p_
 
         Point_Out = (xo, yo)
         T = ECP( Point_Out )
         R = T.neg_point(self.p_)
         return R
         
+    def Point_Mult(self, k, Pin: ECP, method):
+        ''' Point multiply by scalar k'''
+        assert not k < 0 , "Provided k < 0 !"
+        assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"
+
+        if (k % self.n_) == 0 or Pin.is_Unit_Point():
+            return Unit
+
+        i = k
+        R = Unit
+        P = Pin
+        if method == 0:
+            while i:
+                if i & 0x1: # when i[bit0] == 1
+                    R = self.Point_Add(P, R)
+
+                P = self.Point_Dbl(P)
+                i >>= 1
+
+        if method == 1:
+            while i:
+                if i & 0x1: # when i[bit0] == 1
+                    R = self.Point_Add_General(P, R)
+
+                P = self.Point_Add_General(P, P)
+                i >>= 1       
+
+        return R
 
     
 
@@ -227,22 +277,22 @@ dG = secp256k1.Point_Dbl(G)
 dG.print_point('dec')
 print ("=====================================")
 
-#unit test: Point Add: 2G+G = 3G
+#unit test: Point Add: 
 print ("Point Add unit test: tG = dG+G")
 tG = secp256k1.Point_Add(dG, G)
 # tG.print_point('hex')
 tG.print_point('dec')
 print ("=====================================")
 
-#unit test: Point Add: P+ (-P) = Unit(0,0)
+#unit test: Point Add:
 print ("Point Add unit test: Unit(0,0) = tG+tGn")
 tGn = tG.neg_point(p)
-Unit = secp256k1.Point_Add(tG, tGn)
-Unit.print_point('hex')
+U = secp256k1.Point_Add(tG, tGn)
+U.print_point('hex')
 # Unit.print_point('dec')
 print ("=====================================")
 
-#unit test: Point Add General: P+ (-P) = Unit(0,0)
+#unit test: Point Add General: 
 print ("Point Add General unit test 0: dG = G + G")
 dG = secp256k1.Point_Add_General(G, G)
 dG.print_point('dec')
@@ -256,4 +306,44 @@ print ("Point Add General unit test 3: Unit = tG + tGn")
 tGn = tG.neg_point(p)
 tG_plus_tGn = secp256k1.Point_Add_General(tG, tGn)
 tG_plus_tGn.print_point('dec')
+print ("=====================================")
+
+#unit test: Point Multiply:
+k = 111
+method = 0
+print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+kG = secp256k1.Point_Mult(k, G, method)
+kG.print_point('dec')
+
+method = 1
+print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+kG = secp256k1.Point_Mult(k, G, method)
+kG.print_point('dec')
+
+# k = 8
+# print ("Point Mult unit test 1: kG，k = %d" %(k) )
+# kG = secp256k1.Point_Mult(k, G)
+# kG.print_point('dec')
+
+# P = 8G
+# Px = 21262057306151627953595685090280431278183829487175876377991189246716355947009
+# Py = 41749993296225487051377864631615517161996906063147759678534462689479575333124
+
+# P = ECP( (Px, Py) )
+
+# nineG = secp256k1.Point_Add_General(P, G)
+# nineG.print_point('dec')
+# print ("=====================================")
+
+# nineG = secp256k1.Point_Add(P, G)
+# nineG.print_point('dec')
+# print ("=====================================")
+
+# k = rand.randint(1, p )
+# print ("Point Mult unit test 2: k random ")
+# print ("k = 0x%064x" %(k) )
+# print ("k = 0d%d" %(k) )
+# kG = secp256k1.Point_Mult(k, G)
+# kG.print_point('dec')
+
 print ("=====================================")
