@@ -51,11 +51,14 @@ def mod_inv_unittest (iteration):
     return pass_test
 
 ###################################################
-
+## define two class, ECP for Point, ECC for curve
 class ECP:
     ''' EC point class, affine coordinate'''
     def __init__(self, P):
         "P must be tuple of (x, y)"
+        assert (P[0] >= 0 ), "ECP.x must be >0"
+        assert (P[1] >= 0 ), "ECP.y must be >0"
+
         self.x_ = P[0]
         self.y_ = P[1]
         if self.is_Unit_Point():
@@ -83,6 +86,7 @@ class ECP:
             print("Point.x(affine): ", self.x_ ) 
             print("Point.y(affine): ", self.y_ )
 
+# define Global constant Unit Point by using (0,0)
 Unit = ECP ( (0,0) )
 
 class ECC:
@@ -98,12 +102,11 @@ class ECC:
         self.id_= curve_id
         self.name = name
 
-        ### todo: check valid ###
-        if (4* self.a_**3 + 27* self.b_**2) == 0:
-            print ("Provided a and b not fit EC curve definition! ")
+        assert ((4* self.a_**3 + 27* self.b_**2) != 0), "Provided a and b not fit EC curve definition! "
 
-        if self.ECP_on_curve(G):
-            print ("EC Curve: ", self.name, "init done" )
+        assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
+        
+        print ("EC Curve: ", self.name, "init done" )
 
     def ECP_on_curve(self, P: ECP):
         left  = (P.y_** 2) % self.p_
@@ -131,9 +134,9 @@ class ECC:
 
         xo = (m**2 - x - x)    % self.p_
         yo = (y + m*(xo - x) ) % self.p_
-        Point_Out = (xo, yo)
-        T = ECP( Point_Out )
-        R = T.neg_point(self.p_)
+
+        Rneg = ECP( (xo, yo) )
+        R = Rneg.neg_point(self.p_)
         return R
 
     def Point_Add (self, P: ECP, Q: ECP):
@@ -159,9 +162,8 @@ class ECC:
         xo = (m**2 - P.x_ - Q.x_)    % self.p_
         yo = (P.y_ + m*(xo - P.x_) ) % self.p_
 
-        Point_Out = (xo, yo)
-        T = ECP( Point_Out )
-        R = T.neg_point(self.p_)
+        Rneg = ECP( (xo, yo) )
+        R = Rneg.neg_point(self.p_)
         return R
 
     def Point_Add_General (self, P: ECP, Q: ECP):
@@ -181,12 +183,6 @@ class ECC:
             m = m*div % self.p_
 
         else: 
-        # slope m for Add
-            # t1 = ( P.y_ - Q.y_  ) % self.p_
-            # if t1 < 0:
-            #     m = t1 + self.p_
-            # else:
-            #     m = t1
             m = ( P.y_ - Q.y_  ) % self.p_
             
             t2 = (P.x_ - Q.x_) % self.p_
@@ -204,9 +200,8 @@ class ECC:
         if yo < 0:
             yo += self.p_
 
-        Point_Out = (xo, yo)
-        T = ECP( Point_Out )
-        R = T.neg_point(self.p_)
+        Rneg = ECP( (xo, yo) )
+        R = Rneg.neg_point(self.p_)
         return R
         
     def Point_Mult(self, k, Pin: ECP, method):
@@ -242,7 +237,8 @@ class ECC:
 
 ################################################
 ## main ##
-
+## this website can generate test vector and comapre with our result
+## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
 # unit test: modular inverse 
 iter = 100
 ret = mod_inv_unittest(iter)
@@ -319,6 +315,7 @@ method = 1
 print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
 kG = secp256k1.Point_Mult(k, G, method)
 kG.print_point('dec')
+print ("=====================================")
 
 # k = 8
 # print ("Point Mult unit test 1: kG，k = %d" %(k) )
@@ -339,11 +336,14 @@ kG.print_point('dec')
 # nineG.print_point('dec')
 # print ("=====================================")
 
-# k = rand.randint(1, p )
-# print ("Point Mult unit test 2: k random ")
-# print ("k = 0x%064x" %(k) )
-# print ("k = 0d%d" %(k) )
-# kG = secp256k1.Point_Mult(k, G)
-# kG.print_point('dec')
+k = rand.randint(1, p )
+print ("Point Mult unit test 2: k random ")
+print ("k = 0x%064x" %(k) )
+print ("k = 0d%d" %(k) )
+kG0 = secp256k1.Point_Mult(k, G, 0)
+kG0.print_point('dec')
+
+kG1 = secp256k1.Point_Mult(k, G, 1)
+kG1.print_point('dec')
 
 print ("=====================================")
