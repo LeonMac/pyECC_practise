@@ -1,7 +1,7 @@
 ''' python version need > 3.5'''
 
 from random import SystemRandom
-from xmlrpc.client import boolean # cryptographic random byte generator
+#from xmlrpc.client import boolean # cryptographic random byte generator
 rand = SystemRandom()
 
 ## common lib
@@ -265,12 +265,12 @@ class SECP256K1_R1 ():
 
         self.curve = ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
     
-    def PubKey_Gen(self, k, verb: bool, method: str):
+    def PubKey_Gen(self, k, verb: bool):
         Pubkey = self.curve.Point_Mult(k, self.curve.G, 0)
         if (verb):
             print("given k = 0x%064x" %(k) )
             print("Generated Pubkey:" )
-            Pubkey.print_point(method)
+            Pubkey.print_point('hex')
 
     def Signature_Gen():
         pass
@@ -289,7 +289,7 @@ class SECP256K1_R1 ():
 ## curve unit test
 ## this website can generate test vector and comapre with our result
 ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
-def curve_test (curve_id):
+def curve_unit_test (curve_id):
     curve_ins = SECP256K1_R1(curve_id)
     #unit test: Point Double
     print ("Point Double unit test: dG = G+G")
@@ -364,7 +364,7 @@ print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
 print ("=====================================")
 
 curve_id = 714 # secp256k1
-curve_test(curve_id)
-curve_id = 415 # secp256k1
-curve_test(curve_id)
+curve_unit_test(curve_id)
+curve_id = 415 # secp256r1
+curve_unit_test(curve_id)
 
