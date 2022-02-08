@@ -1,6 +1,7 @@
 ''' python version need > 3.5'''
 
-from random import SystemRandom # cryptographic random byte generator
+from random import SystemRandom
+from xmlrpc.client import boolean # cryptographic random byte generator
 rand = SystemRandom()
 
 ## common lib
@@ -90,7 +91,7 @@ class ECP:
 Unit = ECP ( (0,0) )
 
 class ECC:
-    '''EC curve'''
+    '''EC curve class'''
     def __init__(self, a, b, n, p, G:ECP, curve_id, name):
         self.a_ = a
         self.b_ = b
@@ -233,117 +234,137 @@ class ECC:
 
         return R
 
+
+class SECP256K1_R1 ():
+    # secp256k1 parameters
+    def __init__(self, curve_id):
+        if (curve_id == 714): # openssl curve_id for secp256k1
+            self.a  = 0
+            self.b  = 7
+            self.n  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
+            self.Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+            self.Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+
+            self.p  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+            self.name = "secp256k1"
+
+        elif (curve_id == 415): # openssl curve_id for secp256r1=prime256v1
+            self.a  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC
+            self.b  = 0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B
+            self.n  = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
+
+            self.Gx = 0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296
+            self.Gy = 0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
+
+            self.p  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+            self.name = "secp256r1"
+
+        self.G  = ECP( (self.Gx, self.Gy) )
+        self.U  = Unit
+
+        self.curve = ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
     
+    def PubKey_Gen(self, k, verb: bool, method: str):
+        Pubkey = self.curve.Point_Mult(k, self.curve.G, 0)
+        if (verb):
+            print("given k = 0x%064x" %(k) )
+            print("Generated Pubkey:" )
+            Pubkey.print_point(method)
+
+    def Signature_Gen():
+        pass
+    
+    def Signature_Verify():
+        pass
+
+    def Encryption():
+        pass
+
+    def Decryption():
+        pass
+
+
+################################################
+## curve unit test
+## this website can generate test vector and comapre with our result
+## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+def curve_test (curve_id):
+    curve_ins = SECP256K1_R1(curve_id)
+    #unit test: Point Double
+    print ("Point Double unit test: dG = G+G")
+    dG = curve_ins.curve.Point_Dbl(curve_ins.G)
+    # dG.print_point('hex')
+    dG.print_point('dec')
+    print ("=====================================")
+
+    #unit test: Point Add: 
+    print ("Point Add unit test: tG = dG+G")
+    tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
+    # tG.print_point('hex')
+    tG.print_point('dec')
+    print ("=====================================")
+
+    #unit test: Point Add:
+    print ("Point Add unit test: Unit(0,0) = tG+tGn")
+    tGn = tG.neg_point(curve_ins.p)
+    U = curve_ins.curve.Point_Add(tG, tGn)
+    U.print_point('hex')
+    # Unit.print_point('dec')
+    print ("=====================================")
+
+    #unit test: Point Add General: 
+    print ("Point Add General unit test 0: dG = G + G")
+    dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
+    dG.print_point('dec')
+    print ("Point Add General unit test 1: tG = dG + G")
+    tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
+    tG.print_point('dec')
+    print ("Point Add General unit test 2: tG = tG + Uint")
+    tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
+    tG_plus_I.print_point('dec')
+    print ("Point Add General unit test 3: Unit = tG + tGn")
+    tGn = tG.neg_point(curve_ins.p)
+    tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
+    tG_plus_tGn.print_point('dec')
+    print ("=====================================")
+
+    #unit test: Point Multiply:
+    k = 111
+    method = 0
+    print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
+    kG.print_point('dec')
+
+    method = 1
+    print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
+    kG.print_point('dec')
+    print ("=====================================")
+
+    k = rand.randint(1, curve_ins.p )
+    print ("Point Mult unit test 2: k random ")
+    print ("k = 0x%064x" %(k) )
+    print ("k = 0d%d" %(k) )
+    kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
+    kG0.print_point('dec')
+
+    kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
+    kG1.print_point('dec')
+
+    print ("=====================================")
 
 ################################################
 ## main ##
-## this website can generate test vector and comapre with our result
-## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+
 # unit test: modular inverse 
 iter = 100
 ret = mod_inv_unittest(iter)
 print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
 print ("=====================================")
 
-# secp256k1 parameters
-a  = 0
-b  = 7
-n  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+curve_id = 714 # secp256k1
+curve_test(curve_id)
+curve_id = 415 # secp256k1
+curve_test(curve_id)
 
-Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
-
-p  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-
-#Quick verify if (Gx, Gy) is on secp256k1 curve:
-Gy**2 % p == (Gx**3 + Gx*a + b) % p
-
-#init the curve:
-pG = (Gx, Gy)
-G = ECP(pG)
-pI = (0, 0)
-I = ECP(pI)
-
-secp256k1 = ECC(a,b,n,p,G,714, "secp256k1")
-
-#unit test: Point Double
-print ("Point Double unit test: dG = G+G")
-dG = secp256k1.Point_Dbl(G)
-# dG.print_point('hex')
-dG.print_point('dec')
-print ("=====================================")
-
-#unit test: Point Add: 
-print ("Point Add unit test: tG = dG+G")
-tG = secp256k1.Point_Add(dG, G)
-# tG.print_point('hex')
-tG.print_point('dec')
-print ("=====================================")
-
-#unit test: Point Add:
-print ("Point Add unit test: Unit(0,0) = tG+tGn")
-tGn = tG.neg_point(p)
-U = secp256k1.Point_Add(tG, tGn)
-U.print_point('hex')
-# Unit.print_point('dec')
-print ("=====================================")
-
-#unit test: Point Add General: 
-print ("Point Add General unit test 0: dG = G + G")
-dG = secp256k1.Point_Add_General(G, G)
-dG.print_point('dec')
-print ("Point Add General unit test 1: tG = dG + G")
-tG = secp256k1.Point_Add_General(dG, G)
-tG.print_point('dec')
-print ("Point Add General unit test 2: tG = tG + Uint")
-tG_plus_I = secp256k1.Point_Add_General(tG, I)
-tG_plus_I.print_point('dec')
-print ("Point Add General unit test 3: Unit = tG + tGn")
-tGn = tG.neg_point(p)
-tG_plus_tGn = secp256k1.Point_Add_General(tG, tGn)
-tG_plus_tGn.print_point('dec')
-print ("=====================================")
-
-#unit test: Point Multiply:
-k = 111
-method = 0
-print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
-kG = secp256k1.Point_Mult(k, G, method)
-kG.print_point('dec')
-
-method = 1
-print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
-kG = secp256k1.Point_Mult(k, G, method)
-kG.print_point('dec')
-print ("=====================================")
-
-# k = 8
-# print ("Point Mult unit test 1: kG，k = %d" %(k) )
-# kG = secp256k1.Point_Mult(k, G)
-# kG.print_point('dec')
-
-# P = 8G
-# Px = 21262057306151627953595685090280431278183829487175876377991189246716355947009
-# Py = 41749993296225487051377864631615517161996906063147759678534462689479575333124
-
-# P = ECP( (Px, Py) )
-
-# nineG = secp256k1.Point_Add_General(P, G)
-# nineG.print_point('dec')
-# print ("=====================================")
-
-# nineG = secp256k1.Point_Add(P, G)
-# nineG.print_point('dec')
-# print ("=====================================")
-
-k = rand.randint(1, p )
-print ("Point Mult unit test 2: k random ")
-print ("k = 0x%064x" %(k) )
-print ("k = 0d%d" %(k) )
-kG0 = secp256k1.Point_Mult(k, G, 0)
-kG0.print_point('dec')
-
-kG1 = secp256k1.Point_Mult(k, G, 1)
-kG1.print_point('dec')
-
-print ("=====================================")
