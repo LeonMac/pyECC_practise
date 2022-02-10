@@ -6,6 +6,37 @@ rand = SystemRandom()
 
 ## common lib
 
+## helper func -- format print
+class txtcol:
+    BLU = '\033[94m'
+    YEL = '\033[93m'
+    CYA = '\033[96m'
+    GRE = '\033[92m'
+    RED = '\033[91m'
+    RST = '\033[0m'
+
+def print_devider (method: str, n):
+    i = 0
+    while i<n :
+        if method == 'line':
+            print (txtcol.BLU + "-----------------------------------------" + txtcol.RST)
+            # print (txtcol.disable(), end ='')
+        elif method == 'double':
+            print (txtcol.BLU + "=========================================" + txtcol.RST)
+        i+=1
+
+def log (level: str, msg: str ):
+    if   level == 'i':
+        print(txtcol.GRE + msg + txtcol.RST)
+    elif level == 'd':
+        print(txtcol.CYA + msg + txtcol.RST)      
+    elif level == 'w':
+        print(txtcol.YEL + msg + txtcol.RST)
+    elif level == 'f':
+        print(txtcol.RED + msg + txtcol.RST)
+
+
+## reverse modular
 # From http://rosettacode.org/wiki/Modular_inverse#Python
 def half_extended_gcd(aa, bb):
 	lastrem, rem = abs(aa), abs(bb)
@@ -39,7 +70,7 @@ def mod_inv_unittest (iteration):
         mod1 = modular_exp_inv (x, m)
         same = (mod0 == mod1)
         if not same:
-            print("iteration #", iter, "fail: " )
+            print(txtcol.RED + "iteration #", iter, "fail: " + txtcol.RST)
             print("x   : 0x%064x" %(x) )
             print("m   : 0x%064x" %(m) )
             print("mod0: 0x%064x" %(mod0) )
@@ -56,7 +87,7 @@ def mod_inv_unittest (iteration):
 class ECP:
     ''' EC point class, affine coordinate'''
     def __init__(self, P):
-        "P must be tuple of (x, y)"
+        '''P must be tuple of (x, y)'''
         assert (P[0] >= 0 ), "ECP.x must be >0"
         assert (P[1] >= 0 ), "ECP.y must be >0"
 
@@ -235,7 +266,7 @@ class ECC:
         return R
 
 
-class SECP256K1_R1 ():
+class ECC_Curve ():
     # secp256k1 parameters
     def __init__(self, curve_id):
         if (curve_id == 714): # openssl curve_id for secp256k1
@@ -266,13 +297,16 @@ class SECP256K1_R1 ():
         self.curve = ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
     
     def PubKey_Gen(self, k, verb: bool):
-        Pubkey = self.curve.Point_Mult(k, self.curve.G, 0)
+        Pubkey = self.curve.Point_Mult(k, self.curve.G_, 0)
         if (verb):
-            print("given k = 0x%064x" %(k) )
+            print("given privkey = 0x%064x" %(k) )
             print("Generated Pubkey:" )
             Pubkey.print_point('hex')
+        
+        return Pubkey
 
-    def Signature_Gen():
+    def Signature_Gen(priv_key, dig, formt, verb: bool):
+
         pass
     
     def Signature_Verify():
@@ -285,65 +319,68 @@ class SECP256K1_R1 ():
         pass
 
 
-################################################
-## curve unit test
+####################################################
+## ECC unit test
 ## this website can generate test vector and comapre with our result
 ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
-def curve_unit_test (curve_id):
-    curve_ins = SECP256K1_R1(curve_id)
+def ECC_unit_test (curve_id):
+    '''do unit test for Point_Add Point_Double print test vector
+       compare the result with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+    '''
+    curve_ins = ECC_Curve(curve_id)
     #unit test: Point Double
-    print ("Point Double unit test: dG = G+G")
+    log('i', "Point Double unit test: dG = G+G")
     dG = curve_ins.curve.Point_Dbl(curve_ins.G)
     # dG.print_point('hex')
     dG.print_point('dec')
-    print ("=====================================")
+    print_devider('line',1)
 
     #unit test: Point Add: 
-    print ("Point Add unit test: tG = dG+G")
+    log('i', "Point Add unit test: tG = dG+G")
     tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
     # tG.print_point('hex')
     tG.print_point('dec')
-    print ("=====================================")
+    print_devider('line',1)
 
     #unit test: Point Add:
-    print ("Point Add unit test: Unit(0,0) = tG+tGn")
+    log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
     tGn = tG.neg_point(curve_ins.p)
     U = curve_ins.curve.Point_Add(tG, tGn)
     U.print_point('hex')
     # Unit.print_point('dec')
-    print ("=====================================")
+    print_devider('line',1)
 
     #unit test: Point Add General: 
-    print ("Point Add General unit test 0: dG = G + G")
+    log ('i', "Point Add General unit test 0: dG = G + G")
     dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
     dG.print_point('dec')
-    print ("Point Add General unit test 1: tG = dG + G")
+    log ('i', "Point Add General unit test 1: tG = dG + G")
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
     tG.print_point('dec')
-    print ("Point Add General unit test 2: tG = tG + Uint")
+    log ('i', "Point Add General unit test 2: tG = tG + Uint")
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
     tG_plus_I.print_point('dec')
-    print ("Point Add General unit test 3: Unit = tG + tGn")
+    log ('i', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point(curve_ins.p)
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
     tG_plus_tGn.print_point('dec')
-    print ("=====================================")
+    print_devider('line',1)
 
     #unit test: Point Multiply:
     k = 111
     method = 0
-    print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point('dec')
 
     method = 1
-    print ("Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point('dec')
-    print ("=====================================")
+    print_devider('line',1)
 
-    k = rand.randint(1, curve_ins.p )
-    print ("Point Mult unit test 2: k random ")
+    k = rand.randint(1, curve_ins.n )
+    log ('i', "Point Mult unit test 2: k random ")
     print ("k = 0x%064x" %(k) )
     print ("k = 0d%d" %(k) )
     kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
@@ -351,8 +388,20 @@ def curve_unit_test (curve_id):
 
     kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
     kG1.print_point('dec')
+    print_devider('line',1)
 
-    print ("=====================================")
+#####
+def Curve_unit_test (curve_id):
+    '''do unit test for curve unit test '''
+    curve_ins = ECC_Curve(curve_id)
+
+    k = rand.randint(1, curve_ins.n )
+    log ('i', "Pubkey gen unit test:")
+    print ("PrivKey = 0d%d" %(k) )
+    Pubkey = curve_ins.PubKey_Gen(k, True)
+    print_devider('line', 1)
+    pass
+
 
 ################################################
 ## main ##
@@ -361,10 +410,16 @@ def curve_unit_test (curve_id):
 iter = 100
 ret = mod_inv_unittest(iter)
 print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
-print ("=====================================")
+print_devider('double', 1)
 
 curve_id = 714 # secp256k1
-curve_unit_test(curve_id)
-curve_id = 415 # secp256r1
-curve_unit_test(curve_id)
+ECC_unit_test(curve_id)
+print_devider('double', 1)
+
+# curve_id = 415 # secp256r1
+# ECC_unit_test(curve_id)
+
+#####################################
+curve_id = 714 # secp256k1
+Curve_unit_test (curve_id)
 
