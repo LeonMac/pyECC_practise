@@ -1,8 +1,9 @@
 ''' python version need > 3.5'''
 
+import hashlib          # hash function
 from random import SystemRandom
-#from xmlrpc.client import boolean # cryptographic random byte generator
-rand = SystemRandom()
+#from xmlrpc.client import boolean 
+rand = SystemRandom()   # cryptographic random byte generator
 
 ## common lib
 
@@ -35,6 +36,21 @@ def log (level: str, msg: str ):
     elif level == 'f':
         print(txtcol.RED + msg + txtcol.RST)
 
+# hash function
+def hash_256(message: str):
+    """Returns the SHA256 hash of the provided message string."""
+    dig = hashlib.sha256()
+    dig.update( message.encode() ) # convert str to bytes
+    z = int(dig.hexdigest(),16)
+    return z
+
+def hash_test(msg):
+    '''sha256 can be checked directly by linux command line '''
+    '''for exp echo -n msg | sha256sum '''
+    dig = hash_256(msg)
+    print_devider('line',1)
+    print ("msg = ", msg  )
+    print ("dig = 0x%064x" %(dig) )
 
 ## reverse modular
 # From http://rosettacode.org/wiki/Modular_inverse#Python
@@ -305,7 +321,8 @@ class ECC_Curve ():
         
         return Pubkey
 
-    def Signature_Gen(priv_key, dig, formt, verb: bool):
+    def Signature_Gen(priv_key, sh256_dig, formt, verb: bool):
+        ''''''
 
         pass
     
@@ -416,10 +433,17 @@ curve_id = 714 # secp256k1
 ECC_unit_test(curve_id)
 print_devider('double', 1)
 
-# curve_id = 415 # secp256r1
-# ECC_unit_test(curve_id)
-
 #####################################
 curve_id = 714 # secp256k1
 Curve_unit_test (curve_id)
+curve_id = 415 # secp256r1
+ECC_unit_test(curve_id)
 
+print_devider('double', 1)
+
+msg1 = "I love you"
+msg2 = "blablabla..."
+# msg3 = int( rand.randint(1, 1<<255 ), 16)
+hash_test(msg1)
+hash_test(msg2)
+# hash_test(msg3)
