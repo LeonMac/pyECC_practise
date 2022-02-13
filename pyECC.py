@@ -281,7 +281,6 @@ class ECC:
 
         return R
 
-
 class ECC_Curve ():
     # secp256k1 parameters
     def __init__(self, curve_id):
@@ -321,12 +320,27 @@ class ECC_Curve ():
         
         return Pubkey
 
-    def Signature_Gen(priv_key, sh256_dig, formt, verb: bool):
-        ''''''
+    def Sig_Gen(self, priv_key, randk, sh256_dig, formt:str, verb: bool):
+        '''Input:  priv_key, randk, sha256_dig, pub_key format (comp|non-comp)'''
+        '''Output: sig_r, sig_s, dig, pub_key_x, pub_key_y'''
+        assert not priv_key  <= self.curve.n_ , "Provided private key > curve n!"
+        assert not sh256_dig <= self.curve.n_ , "Provided digest > curve n!"
+        assert not randk <= self.curve.n_ , "Provided randomk > curve n!"
 
-        pass
+        z       = sh256_dig
+        pub_key = self.PubKey_Gen(priv_key, verb)
+
+        rx = 0
+        s  = 0
+        while not rx and not s:
+            R  = self.PubKey_Gen(randk, verb)
+            rx = R.x_
+            ry = R.y_
+            s = ((z + rx * priv_key) * modular_inverse(randk, self.curve.n_)) % self.curve.n_
+
+        return (rx, s, sh256_dig, pub_key.x_, pub_key.y_)
     
-    def Signature_Verify():
+    def Signature_Verify(rx, s, z, pub_x, pub_y):
         pass
 
     def Encryption():
