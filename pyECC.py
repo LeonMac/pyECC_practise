@@ -118,8 +118,12 @@ class ECP:
         else:
             return False
 
-    def is_reverse(self, Q, p):
-        if (self.x_ == Q.x_) and (self.y_ == p - Q.y_):
+    def is_reverse(self, Pin, p):
+        if (self.x_ == Pin.x_) and (self.y_ == p - Pin.y_):
+            return True
+
+    def is_equal(self, Pin):
+        if (self.x_ == Pin.x_) and (self.y_ == Pin.y_):
             return True
     
     def neg_point(self, mod):
@@ -223,7 +227,7 @@ class ECC:
         if Q.is_reverse(P, self.p_):
             return Unit
         
-        if P == Q:
+        if P.is_equal(Q):
         # slope m for Dbl
             m = ( 3 * P.x_**2  ) % self.p_
             m = ( m + self.a_  ) % self.p_
@@ -443,12 +447,12 @@ def Point_Addition_HE_test (curve_id, test_round):
     fail = 0
     while i < test_round:  
 
-        k1 = rand.randint(1, curve_ins.n )
+        k1 = rand.randint(curve_ins.n -10, curve_ins.n )
         #k1 = i+1
         #print ("k1 = 0d%d" %(k1) )
         k1G = curve_ins.PubKey_Gen(k1, False)
 
-        k2 = rand.randint(1, curve_ins.n )
+        k2 = rand.randint(curve_ins.n - i*10, curve_ins.n )
         #k2 = 2*i+3
 
         #print ("k2 = 0d%d" %(k2) )
@@ -460,7 +464,7 @@ def Point_Addition_HE_test (curve_id, test_round):
 
         kG_1  = curve_ins.PubKey_Gen(k, False)
 
-        if kG_0.x_ != kG_1.x_ or kG_0.y_ != kG_1.y_ :
+        if not kG_0.is_equal(kG_1) :
             fail +=1
             print ("Test round %d of %d fail" %(i, test_round))
             kG_0.print_point('hex')
