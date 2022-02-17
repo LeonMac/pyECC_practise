@@ -444,12 +444,12 @@ def Point_Addition_HE_test (curve_id, test_round):
     while i < test_round:  
 
         k1 = rand.randint(1, curve_ins.n )
-        k1 = i+1
+        #k1 = i+1
         #print ("k1 = 0d%d" %(k1) )
         k1G = curve_ins.PubKey_Gen(k1, False)
 
-        # k2 = rand.randint(1, curve_ins.n )
-        k2 = 2*i+3
+        k2 = rand.randint(1, curve_ins.n )
+        #k2 = 2*i+3
 
         #print ("k2 = 0d%d" %(k2) )
         k2G = curve_ins.PubKey_Gen(k2, False)
