@@ -431,8 +431,48 @@ def Curve_unit_test (curve_id):
     print ("PrivKey = 0d%d" %(k) )
     Pubkey = curve_ins.PubKey_Gen(k, True)
     print_devider('line', 1)
+    
     pass
 
+
+def Point_Addition_HE_test (curve_id, test_round):
+    '''do unit test for curve unit test '''
+    curve_ins = ECC_Curve(curve_id)
+
+    i = 0
+    fail = 0
+    while i < test_round:  
+
+        k1 = rand.randint(1, curve_ins.n )
+        k1 = i+1
+        #print ("k1 = 0d%d" %(k1) )
+        k1G = curve_ins.PubKey_Gen(k1, False)
+
+        # k2 = rand.randint(1, curve_ins.n )
+        k2 = 2*i+3
+
+        #print ("k2 = 0d%d" %(k2) )
+        k2G = curve_ins.PubKey_Gen(k2, False)
+
+        kG_0  = curve_ins.curve.Point_Add_General(k1G, k2G)
+
+        k = (k1 + k2) % curve_ins.n
+
+        kG_1  = curve_ins.PubKey_Gen(k, False)
+
+        if kG_0.x_ != kG_1.x_ or kG_0.y_ != kG_1.y_ :
+            fail +=1
+            print ("Test round %d of %d fail" %(i, test_round))
+            kG_0.print_point('hex')
+            kG_1.print_point('hex')
+
+        i+=1
+    print ("Total test round %d, %d fail" %(test_round, fail))
+    print_devider('line', 1)
+
+    return fail
+   
+   
 
 ################################################
 ## main ##
@@ -461,3 +501,7 @@ msg2 = "blablabla..."
 hash_test(msg1)
 hash_test(msg2)
 # hash_test(msg3)
+
+
+#####################################
+Point_Addition_HE_test(714, 200)
