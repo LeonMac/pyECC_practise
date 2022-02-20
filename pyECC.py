@@ -342,10 +342,25 @@ class ECC_Curve ():
             ry = R.y_
             s = ((z + rx * priv_key) * modular_inverse(randk, self.curve.n_)) % self.curve.n_
 
-        return (rx, s, sh256_dig, pub_key.x_, pub_key.y_)
+        '''todo: here rx is possibly > n? in such case do we need reduce rx by rx-n?'''
+        return (rx, s, z, pub_key.x_, pub_key.y_)
     
-    def Signature_Verify(rx, s, z, pub_x, pub_y):
-        pass
+    def Signature_Verify(self, r, s, z, pub_x, pub_y):
+        s_inv = modular_inverse (s, self.curve.n_)
+
+        u1 = (z * s_inv) % self.curve.n_
+        u2 = (r * s_inv) % self.curve.n_
+
+        u1G = self.curve.Point_Mult(u1, self.curve.G_)
+        u2P = self.Point_Mult(u2, ECP((pub_x, pub_y)))
+
+        R = self.curve.Point_Add_General(u1G, u2P)
+
+        if r  == (R.x_ % self.curve.n_):
+            return True     ## signature verify pass
+        else:
+            return False    ## signature verify fail
+
 
     def Encryption():
         pass
@@ -508,4 +523,4 @@ hash_test(msg2)
 
 
 #####################################
-Point_Addition_HE_test(714, 200)
+Point_Addition_HE_test(714, 100)
