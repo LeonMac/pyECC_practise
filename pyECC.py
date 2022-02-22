@@ -309,6 +309,9 @@ class ECC_Curve ():
 
             self.p  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
             self.name = "secp256r1"
+        else:
+            print ("Un-support curve!")
+            return
 
         self.G  = ECP( (self.Gx, self.Gy) )
         self.U  = Unit
@@ -327,11 +330,14 @@ class ECC_Curve ():
     def Sig_Gen(self, priv_key, randk, sh256_dig, formt:str, verb: bool):
         '''Input:  priv_key, randk, sha256_dig, pub_key format (comp|non-comp)'''
         '''Output: sig_r, sig_s, dig, pub_key_x, pub_key_y'''
-        assert not priv_key  <= self.curve.n_ , "Provided private key > curve n!"
-        assert not sh256_dig <= self.curve.n_ , "Provided digest > curve n!"
-        assert not randk <= self.curve.n_ , "Provided randomk > curve n!"
+        assert not priv_key  > self.curve.n_ , "Provided private key > curve n!"
+        assert not randk > self.curve.n_ , "Provided randomk > curve n!"
+        #assert not sh256_dig <= self.curve.n_ , "Provided digest > curve n!"
+        if sh256_dig >= self.curve.n_ :
+            z = sh256_dig - self.curve.n_
+        else:
+            z = sh256_dig
 
-        z       = sh256_dig
         pub_key = self.PubKey_Gen(priv_key, verb)
 
         rx = 0
@@ -342,7 +348,8 @@ class ECC_Curve ():
             ry = R.y_
             s = ((z + rx * priv_key) * modular_inverse(randk, self.curve.n_)) % self.curve.n_
 
-        '''todo: here rx is possibly > n? in such case do we need reduce rx by rx-n?'''
+        '''todo: low-x here rx is possibly > n? in such case do we need reduce rx by rx-n?'''
+        '''todo: low-s here s is possibly > n/2?'''
         return (rx, s, z, pub_key.x_, pub_key.y_)
     
     def Signature_Verify(self, r, s, z, pub_x, pub_y):
@@ -351,8 +358,8 @@ class ECC_Curve ():
         u1 = (z * s_inv) % self.curve.n_
         u2 = (r * s_inv) % self.curve.n_
 
-        u1G = self.curve.Point_Mult(u1, self.curve.G_)
-        u2P = self.Point_Mult(u2, ECP((pub_x, pub_y)))
+        u1G = self.curve.Point_Mult(u1, self.curve.G_, 0)
+        u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y)), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
 
@@ -367,6 +374,35 @@ class ECC_Curve ():
 
     def Decryption():
         pass
+
+def Sig_Verify_unit_test(curve_id, test_round):
+    ''' msg signature gen and verify test '''
+    print_devider('line', 1)
+    print ("Signature generate+signature verify test, plan to run %d" %(test_round))
+    curve_ins = ECC_Curve(curve_id)
+
+    i = 0
+    test_pass = 0
+    msg = "This is a masterpiece from Tiger.Tang"
+    dig = hash_256(msg)
+
+    while i < test_round: 
+
+        priv_key = rand.randint(1, curve_ins.n )
+        randk    = rand.randint(1, curve_ins.n )
+
+        pub_key  = curve_ins.PubKey_Gen(priv_key, False)
+        r,s,z,x,y = curve_ins.Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+        if curve_ins.Signature_Verify(r,s,z,x,y):
+            test_pass+=1
+        
+        i+=1
+    
+    print ("Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
+    print_devider('line', 1)
+
+    return test_pass
+
 
 
 ####################################################
@@ -455,11 +491,11 @@ def Curve_unit_test (curve_id):
 
 
 def Point_Addition_HE_test (curve_id, test_round):
-    '''do unit test for curve unit test '''
+    '''Point Add homomorphic encryption test '''
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
-    fail = 0
+    test_pass = 0
     while i < test_round:  
 
         k1 = rand.randint(curve_ins.n -10, curve_ins.n )
@@ -479,17 +515,17 @@ def Point_Addition_HE_test (curve_id, test_round):
 
         kG_1  = curve_ins.PubKey_Gen(k, False)
 
-        if not kG_0.is_equal(kG_1) :
-            fail +=1
+        if kG_0.is_equal(kG_1) :
+            test_pass +=1
             print ("Test round %d of %d fail" %(i, test_round))
             kG_0.print_point('hex')
             kG_1.print_point('hex')
 
         i+=1
-    print ("Total test round %d, %d fail" %(test_round, fail))
+    print ("Total test round %d, %d pass" %(test_round, test_pass))
     print_devider('line', 1)
 
-    return fail
+    return test_pass
    
    
 
@@ -509,6 +545,7 @@ print_devider('double', 1)
 #####################################
 curve_id = 714 # secp256k1
 Curve_unit_test (curve_id)
+
 curve_id = 415 # secp256r1
 ECC_unit_test(curve_id)
 
@@ -523,4 +560,7 @@ hash_test(msg2)
 
 
 #####################################
-Point_Addition_HE_test(714, 100)
+#oint_Addition_HE_test(714, 100)
+
+Sig_Verify_unit_test(714, 100)
+Sig_Verify_unit_test(415, 100)
