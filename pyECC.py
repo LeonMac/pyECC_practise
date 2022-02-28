@@ -1,105 +1,17 @@
 ''' python version need > 3.5'''
 
-import hashlib          # hash function
+
 from random import SystemRandom
 #from xmlrpc.client import boolean 
 rand = SystemRandom()   # cryptographic random byte generator
 
-## common lib
+import helper
+import modulo
 
-## helper func -- format print
-class txtcol:
-    BLU = '\033[94m'
-    YEL = '\033[93m'
-    CYA = '\033[96m'
-    GRE = '\033[92m'
-    RED = '\033[91m'
-    RST = '\033[0m'
 
-def print_devider (method: str, n):
-    i = 0
-    while i<n :
-        if method == 'line':
-            print (txtcol.BLU + "-----------------------------------------" + txtcol.RST)
-            # print (txtcol.disable(), end ='')
-        elif method == 'double':
-            print (txtcol.BLU + "=========================================" + txtcol.RST)
-        i+=1
-
-def log (level: str, msg: str ):
-    if   level == 'i':
-        print(txtcol.GRE + msg + txtcol.RST)
-    elif level == 'd':
-        print(txtcol.CYA + msg + txtcol.RST)      
-    elif level == 'w':
-        print(txtcol.YEL + msg + txtcol.RST)
-    elif level == 'f':
-        print(txtcol.RED + msg + txtcol.RST)
-
-# hash function
-def hash_256(message: str):
-    """Returns the SHA256 hash of the provided message string."""
-    dig = hashlib.sha256()
-    dig.update( message.encode() ) # convert str to bytes
-    z = int(dig.hexdigest(),16)
-    return z
-
-def hash_test(msg):
-    '''sha256 can be checked directly by linux command line '''
-    '''for exp echo -n msg | sha256sum '''
-    dig = hash_256(msg)
-    print_devider('line',1)
-    print ("msg = ", msg  )
-    print ("dig = 0x%064x" %(dig) )
-
-## reverse modular
-# From http://rosettacode.org/wiki/Modular_inverse#Python
-def half_extended_gcd(aa, bb):
-	lastrem, rem = abs(aa), abs(bb)
-	x, lastx = 0, 1
-	while rem:
-		lastrem, (quotient, rem) = rem, divmod(lastrem, rem)
-		x, lastx = lastx - quotient*x, x
-	return lastrem, lastx 
-
-def modular_inverse(a, m):
-    ''' compute the multiplicative inverse, i.e. for x*a = a*x = 1 (mod m), return x '''
-    assert a>0 , "The operator value a must be >0 for this pllication"
-    g, x = half_extended_gcd(a, m)
-    if g != 1:
-        raise ValueError
     
-    return x % m
-
-def modular_exp_inv(a, m):
-	''' compute the multiplicative inverse, by doing python native modulo exponentiation'''
-	return pow(a, m-2, m)
-
-def mod_inv_unittest (iteration):
-    x = rand.randint(1, (1<<256)-1 )
-    m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-
-    iter = 0
-    pass_test = 0
-    while iter < iteration:
-        mod0 = modular_inverse (x, m)
-        mod1 = modular_exp_inv (x, m)
-        same = (mod0 == mod1)
-        if not same:
-            print(txtcol.RED + "iteration #", iter, "fail: " + txtcol.RST)
-            print("x   : 0x%064x" %(x) )
-            print("m   : 0x%064x" %(m) )
-            print("mod0: 0x%064x" %(mod0) )
-            print("mod1: 0x%064x" %(mod1) )  
-
-            print("  " )
-        else: pass_test += 1
-        iter += 1
-
-    return pass_test
-
 ###################################################
-## define two class, ECP for Point, ECC for curve
+## ECP = EC Point
 class ECP:
     ''' EC point class, affine coordinate'''
     def __init__(self, P):
@@ -141,6 +53,7 @@ class ECP:
 # define Global constant Unit Point by using (0,0)
 Unit = ECP ( (0,0) )
 
+# ECC = EC Curve
 class ECC:
     '''EC curve class'''
     def __init__(self, a, b, n, p, G:ECP, curve_id, name):
@@ -181,7 +94,7 @@ class ECC:
         # slope m
         m = ( 3*x**2    ) % self.p_
         m = (m + self.a_) % self.p_
-        div = modular_inverse(2*y, self.p_)
+        div = modulo.modular_inverse(2*y, self.p_)
         m = m*div % self.p_
 
         xo = (m**2 - x - x)    % self.p_
@@ -205,9 +118,9 @@ class ECC:
             
         t2 = (P.x_ - Q.x_) % self.p_
         if t2 < 0:
-            div = modular_inverse(t2+self.p_, self.p_)
+            div = modulo.modular_inverse(t2+self.p_, self.p_)
         else:
-            div = modular_inverse(t2, self.p_)
+            div = modulo.modular_inverse(t2, self.p_)
         
         m = m*div % self.p_
         
@@ -231,7 +144,7 @@ class ECC:
         # slope m for Dbl
             m = ( 3 * P.x_**2  ) % self.p_
             m = ( m + self.a_  ) % self.p_
-            div = modular_inverse(2*P.y_, self.p_)
+            div = modulo.modular_inverse(2*P.y_, self.p_)
             m = m*div % self.p_
 
         else: 
@@ -239,9 +152,9 @@ class ECC:
             
             t2 = (P.x_ - Q.x_) % self.p_
             if t2 < 0:
-                div = modular_inverse(t2+self.p_, self.p_)
+                div = modulo.modular_inverse(t2+self.p_, self.p_)
             else:
-                div = modular_inverse(t2, self.p_)
+                div = modulo.modular_inverse(t2, self.p_)
             m = m*div % self.p_
 
         # common for Output point:
@@ -346,14 +259,14 @@ class ECC_Curve ():
             R  = self.PubKey_Gen(randk, verb)
             rx = R.x_
             ry = R.y_
-            s = ((z + rx * priv_key) * modular_inverse(randk, self.curve.n_)) % self.curve.n_
+            s = ((z + rx * priv_key) * modulo.modular_inverse(randk, self.curve.n_)) % self.curve.n_
 
         '''todo: low-x here rx is possibly > n? in such case do we need reduce rx by rx-n?'''
         '''todo: low-s here s is possibly > n/2?'''
         return (rx, s, z, pub_key.x_, pub_key.y_)
     
     def Signature_Verify(self, r, s, z, pub_x, pub_y):
-        s_inv = modular_inverse (s, self.curve.n_)
+        s_inv = modulo.modular_inverse (s, self.curve.n_)
 
         u1 = (z * s_inv) % self.curve.n_
         u2 = (r * s_inv) % self.curve.n_
@@ -368,7 +281,6 @@ class ECC_Curve ():
         else:
             return False    ## signature verify fail
 
-
     def Encryption():
         pass
 
@@ -377,14 +289,14 @@ class ECC_Curve ():
 
 def Sig_Verify_unit_test(curve_id, test_round):
     ''' msg signature gen and verify test '''
-    print_devider('line', 1)
+    helper.print_devider('line', 1)
     print ("Signature generate+signature verify test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
     test_pass = 0
     msg = "This is a masterpiece from Tiger.Tang"
-    dig = hash_256(msg)
+    dig = helper.hash_256(msg)
 
     while i < test_round: 
 
@@ -399,7 +311,7 @@ def Sig_Verify_unit_test(curve_id, test_round):
         i+=1
     
     print ("Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
-    print_devider('line', 1)
+    helper.print_devider('line', 1)
 
     return test_pass
 
@@ -415,58 +327,58 @@ def ECC_unit_test (curve_id):
     '''
     curve_ins = ECC_Curve(curve_id)
     #unit test: Point Double
-    log('i', "Point Double unit test: dG = G+G")
+    helper.log('i', "Point Double unit test: dG = G+G")
     dG = curve_ins.curve.Point_Dbl(curve_ins.G)
     # dG.print_point('hex')
     dG.print_point('dec')
-    print_devider('line',1)
+    helper.print_devider('line',1)
 
     #unit test: Point Add: 
-    log('i', "Point Add unit test: tG = dG+G")
+    helper.log('i', "Point Add unit test: tG = dG+G")
     tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
     # tG.print_point('hex')
     tG.print_point('dec')
-    print_devider('line',1)
+    helper.print_devider('line',1)
 
     #unit test: Point Add:
-    log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
+    helper.log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
     tGn = tG.neg_point(curve_ins.p)
     U = curve_ins.curve.Point_Add(tG, tGn)
     U.print_point('hex')
     # Unit.print_point('dec')
-    print_devider('line',1)
+    helper.print_devider('line',1)
 
     #unit test: Point Add General: 
-    log ('i', "Point Add General unit test 0: dG = G + G")
+    helper.log ('i', "Point Add General unit test 0: dG = G + G")
     dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
     dG.print_point('dec')
-    log ('i', "Point Add General unit test 1: tG = dG + G")
+    helper.log ('i', "Point Add General unit test 1: tG = dG + G")
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
     tG.print_point('dec')
-    log ('i', "Point Add General unit test 2: tG = tG + Uint")
+    helper.log ('i', "Point Add General unit test 2: tG = tG + Uint")
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
     tG_plus_I.print_point('dec')
-    log ('i', "Point Add General unit test 3: Unit = tG + tGn")
+    helper.log ('i', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point(curve_ins.p)
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
     tG_plus_tGn.print_point('dec')
-    print_devider('line',1)
+    helper.print_devider('line',1)
 
     #unit test: Point Multiply:
     k = 111
     method = 0
-    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    helper.log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point('dec')
 
     method = 1
-    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    helper.log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point('dec')
-    print_devider('line',1)
+    helper.print_devider('line',1)
 
     k = rand.randint(1, curve_ins.n )
-    log ('i', "Point Mult unit test 2: k random ")
+    helper.log ('i', "Point Mult unit test 2: k random ")
     print ("k = 0x%064x" %(k) )
     print ("k = 0d%d" %(k) )
     kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
@@ -474,7 +386,7 @@ def ECC_unit_test (curve_id):
 
     kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
     kG1.print_point('dec')
-    print_devider('line',1)
+    helper.print_devider('line',1)
 
 #####
 def Curve_unit_test (curve_id):
@@ -482,10 +394,10 @@ def Curve_unit_test (curve_id):
     curve_ins = ECC_Curve(curve_id)
 
     k = rand.randint(1, curve_ins.n )
-    log ('i', "Pubkey gen unit test:")
+    helper.log ('i', "Pubkey gen unit test:")
     print ("PrivKey = 0d%d" %(k) )
     Pubkey = curve_ins.PubKey_Gen(k, True)
-    print_devider('line', 1)
+    helper.print_devider('line', 1)
     
     pass
 
@@ -523,7 +435,7 @@ def Point_Addition_HE_test (curve_id, test_round):
 
         i+=1
     print ("Total test round %d, %d pass" %(test_round, test_pass))
-    print_devider('line', 1)
+    helper.print_devider('line', 1)
 
     return test_pass
    
@@ -532,31 +444,21 @@ def Point_Addition_HE_test (curve_id, test_round):
 ################################################
 ## main ##
 
-# unit test: modular inverse 
-iter = 100
-ret = mod_inv_unittest(iter)
-print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
-print_devider('double', 1)
-
 curve_id = 714 # secp256k1
 ECC_unit_test(curve_id)
-print_devider('double', 1)
+helper.print_devider('double', 1)
+
+curve_id = 415 # secp256r1
+ECC_unit_test(curve_id)
 
 #####################################
 curve_id = 714 # secp256k1
 Curve_unit_test (curve_id)
 
+helper.print_devider('double', 1)
+
 curve_id = 415 # secp256r1
-ECC_unit_test(curve_id)
-
-print_devider('double', 1)
-
-msg1 = "I love you"
-msg2 = "blablabla..."
-# msg3 = int( rand.randint(1, 1<<255 ), 16)
-hash_test(msg1)
-hash_test(msg2)
-# hash_test(msg3)
+Curve_unit_test (curve_id)
 
 
 #####################################
