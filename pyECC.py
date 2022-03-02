@@ -1,204 +1,15 @@
 ''' python version need > 3.5'''
 
-
 from random import SystemRandom
 #from xmlrpc.client import boolean 
 rand = SystemRandom()   # cryptographic random byte generator
 
 import helper
 import modulo
-
-
-    
-###################################################
-## ECP = EC Point
-class ECP:
-    ''' EC point class, affine coordinate'''
-    def __init__(self, P):
-        '''P must be tuple of (x, y)'''
-        assert (P[0] >= 0 ), "ECP.x must be >0"
-        assert (P[1] >= 0 ), "ECP.y must be >0"
-
-        self.x_ = P[0]
-        self.y_ = P[1]
-        if self.is_Unit_Point():
-            print ("This is the Unit Point!")
-
-    def is_Unit_Point(self):
-        if self.x_ == 0 and self.y_ == 0:
-            return True
-        else:
-            return False
-
-    def is_reverse(self, Pin, p):
-        if (self.x_ == Pin.x_) and (self.y_ == p - Pin.y_):
-            return True
-
-    def is_equal(self, Pin):
-        if (self.x_ == Pin.x_) and (self.y_ == Pin.y_):
-            return True
-    
-    def neg_point(self, mod):
-        ret = (self.x_, mod - self.y_)
-        return ECP(ret)
-
-    def print_point(self, mode):
-        if mode == 'hex':
-            print("Point.x(affine): ", hex( self.x_ ) )
-            print("Point.y(affine): ", hex( self.y_ ) )
-        elif mode == 'dec':
-            print("Point.x(affine): ", self.x_ ) 
-            print("Point.y(affine): ", self.y_ )
-
-# define Global constant Unit Point by using (0,0)
-Unit = ECP ( (0,0) )
-
-# ECC = EC Curve
-class ECC:
-    '''EC curve class'''
-    def __init__(self, a, b, n, p, G:ECP, curve_id, name):
-        self.a_ = a
-        self.b_ = b
-        self.n_ = n
-
-        self.p_ = p
-        self.G_ = G
-
-        self.id_= curve_id
-        self.name = name
-
-        assert ((4* self.a_**3 + 27* self.b_**2) != 0), "Provided a and b not fit EC curve definition! "
-
-        assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
-        
-        print ("EC Curve: ", self.name, "init done" )
-
-    def ECP_on_curve(self, P: ECP):
-        left  = (P.y_** 2) % self.p_
-        right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
-        on_curve = (left == right)
-        if not on_curve:
-            print ("Priovided Point is NOT on curve: ")
-            P.print_point('hex')
-
-        return on_curve
-    
-    # def cal_slope0():
-    #     '''when P and Q are same points, i.e. for Point double'''
-
-    def Point_Dbl (self, P: ECP):
-        '''calculate R = P + P = 2P'''
-        x = P.x_
-        y = P.y_
-
-        # slope m
-        m = ( 3*x**2    ) % self.p_
-        m = (m + self.a_) % self.p_
-        div = modulo.modular_inverse(2*y, self.p_)
-        m = m*div % self.p_
-
-        xo = (m**2 - x - x)    % self.p_
-        yo = (y + m*(xo - x) ) % self.p_
-
-        Rneg = ECP( (xo, yo) )
-        R = Rneg.neg_point(self.p_)
-        return R
-
-    def Point_Add (self, P: ECP, Q: ECP):
-        '''calculate R = P + Q, when P != Q '''
-        if Q.is_Unit_Point():
-            return P
-        if P.is_Unit_Point():
-            return Q
-        if Q.is_reverse(P, self.p_):
-            return Unit
-
-        # slope m
-        m = ( P.y_ - Q.y_  ) % self.p_
-            
-        t2 = (P.x_ - Q.x_) % self.p_
-        if t2 < 0:
-            div = modulo.modular_inverse(t2+self.p_, self.p_)
-        else:
-            div = modulo.modular_inverse(t2, self.p_)
-        
-        m = m*div % self.p_
-        
-        xo = (m**2 - P.x_ - Q.x_)    % self.p_
-        yo = (P.y_ + m*(xo - P.x_) ) % self.p_
-
-        Rneg = ECP( (xo, yo) )
-        R = Rneg.neg_point(self.p_)
-        return R
-
-    def Point_Add_General (self, P: ECP, Q: ECP):
-        '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
-        if Q.is_Unit_Point():
-            return P
-        if P.is_Unit_Point():
-            return Q
-        if Q.is_reverse(P, self.p_):
-            return Unit
-        
-        if P.is_equal(Q):
-        # slope m for Dbl
-            m = ( 3 * P.x_**2  ) % self.p_
-            m = ( m + self.a_  ) % self.p_
-            div = modulo.modular_inverse(2*P.y_, self.p_)
-            m = m*div % self.p_
-
-        else: 
-            m = ( P.y_ - Q.y_  ) % self.p_
-            
-            t2 = (P.x_ - Q.x_) % self.p_
-            if t2 < 0:
-                div = modulo.modular_inverse(t2+self.p_, self.p_)
-            else:
-                div = modulo.modular_inverse(t2, self.p_)
-            m = m*div % self.p_
-
-        # common for Output point:
-        xo = ( m**2 - P.x_ - Q.x_  ) % self.p_
-        if xo < 0:
-            xo += self.p_
-        yo = (P.y_ + m*(xo - P.x_) ) % self.p_
-        if yo < 0:
-            yo += self.p_
-
-        Rneg = ECP( (xo, yo) )
-        R = Rneg.neg_point(self.p_)
-        return R
-        
-    def Point_Mult(self, k, Pin: ECP, method):
-        ''' Point multiply by scalar k'''
-        assert not k < 0 , "Provided k < 0 !"
-        assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"
-
-        if (k % self.n_) == 0 or Pin.is_Unit_Point():
-            return Unit
-
-        i = k
-        R = Unit
-        P = Pin
-        if method == 0:
-            while i:
-                if i & 0x1: # when i[bit0] == 1
-                    R = self.Point_Add(P, R)
-
-                P = self.Point_Dbl(P)
-                i >>= 1
-
-        if method == 1:
-            while i:
-                if i & 0x1: # when i[bit0] == 1
-                    R = self.Point_Add_General(P, R)
-
-                P = self.Point_Add_General(P, P)
-                i >>= 1       
-
-        return R
+import ecc
 
 class ECC_Curve ():
+    ''' instance implement of ECC libarary '''
     # secp256k1 parameters
     def __init__(self, curve_id):
         if (curve_id == 714): # openssl curve_id for secp256k1
@@ -226,10 +37,10 @@ class ECC_Curve ():
             print ("Un-support curve!")
             return
 
-        self.G  = ECP( (self.Gx, self.Gy) )
-        self.U  = Unit
+        self.G  = ecc.ECP( (self.Gx, self.Gy) )
+        self.U  = ecc.Unit
 
-        self.curve = ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
+        self.curve = ecc.ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
     
     def PubKey_Gen(self, k, verb: bool):
         Pubkey = self.curve.Point_Mult(k, self.curve.G_, 0)
@@ -272,23 +83,46 @@ class ECC_Curve ():
         u2 = (r * s_inv) % self.curve.n_
 
         u1G = self.curve.Point_Mult(u1, self.curve.G_, 0)
-        u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y)), 0)
+        u2P = self.curve.Point_Mult(u2, ecc.ECP((pub_x, pub_y)), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
 
-        if r  == (R.x_ % self.curve.n_):
-            return True     ## signature verify pass
-        else:
-            return False    ## signature verify fail
+        ret = ( r  == (R.x_ % self.curve.n_) ) ## signature verify pass/fail
+        return ret
 
-    def Encryption():
+    ###############################################
+    def ECDH (self, self_priv_key, counter_part_PubKey: ecc.ECP):
+        assert self.curve.ECP_on_curve(counter_part_PubKey) , "Provided Pubkey is not on curve!"
+        assert not self_priv_key  > self.curve.n_ , "Provided private key > curve n!"
+
+        Q = self.curve.Point_Mult(self_priv_key, counter_part_PubKey, 0)
+        return Q
+
+
+    ###############################################
+
+    def Encryption(self, Msg:str, Pub:ecc.ECP ):
+        assert self.curve.ECP_on_curve(Pub) , "Provided Pubkey is not on curve!"
+
+        dP = self.U
+        while (dP == self.U):
+            d  = rand.randint(1, self.curve.n_ )
+            dP = self.curve.Point_Mult(d, self.curve.G_, 0)
+
+        R  = self.Unit
+        while (R == self.U):
+            k = rand.randint(1, self.curve.n_ )
+            R = self.curve.Point_Mult(k, self.curve.G_, 0)
+        
+
         pass
 
     def Decryption():
         pass
 
+###########################################################
 def Sig_Verify_unit_test(curve_id, test_round):
-    ''' msg signature gen and verify test '''
+    ''' signature generate and verify test '''
     helper.print_devider('line', 1)
     print ("Signature generate+signature verify test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
@@ -315,6 +149,39 @@ def Sig_Verify_unit_test(curve_id, test_round):
 
     return test_pass
 
+
+def ECDH_unit_test(curve_id, test_round):
+    ''' ECDH test '''
+    print ("ECDH test, plan to run %d" %(test_round))
+    curve_ins = ECC_Curve(curve_id)
+
+    i = 0
+    test_pass = 0
+    while i < test_round:
+        # Alice private key and Pubkey
+        da = rand.randint(1, curve_ins.n )
+        Pa = curve_ins.PubKey_Gen(da, False)
+
+        # Bob private key and Pubkey
+        db = rand.randint(1, curve_ins.n )
+        Pb = curve_ins.PubKey_Gen(db, False)
+
+        # Alice Pubkey sent to Bob, Bob calculate Share secret
+        S_bob = curve_ins.ECDH(db, Pa)
+
+        # Bob Pubkey sent to Alice, Alice calculate Share secret
+        S_alice = curve_ins.ECDH(da, Pb)
+
+        if S_bob.is_equal(S_alice):
+            test_pass += 1
+
+        i += 1
+    
+    print ("EDCH test round %d, %d pass" %(test_round, test_pass))
+    helper.print_devider('line', 1)
+
+    return test_pass
+   
 
 
 ####################################################
@@ -404,6 +271,7 @@ def Curve_unit_test (curve_id):
 
 def Point_Addition_HE_test (curve_id, test_round):
     '''Point Add homomorphic encryption test '''
+    print ("Point Add homomorphic encryption test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -429,6 +297,7 @@ def Point_Addition_HE_test (curve_id, test_round):
 
         if kG_0.is_equal(kG_1) :
             test_pass +=1
+        else:
             print ("Test round %d of %d fail" %(i, test_round))
             kG_0.print_point('hex')
             kG_1.print_point('hex')
@@ -444,25 +313,39 @@ def Point_Addition_HE_test (curve_id, test_round):
 ################################################
 ## main ##
 
-curve_id = 714 # secp256k1
-ECC_unit_test(curve_id)
+# curve_id, same as openssl
+curve_id_sk1 = 714 # secp256k1
+curve_id_sr1 = 415 # secp256r1
+
+# ecc library test
+ECC_unit_test(curve_id_sk1)
+helper.print_devider('double', 1)
+ECC_unit_test(curve_id_sr1)
+helper.print_devider('double', 1)
+#####################################
+
+# Curve test
+Curve_unit_test (curve_id_sk1)
+helper.print_devider('double', 1)
+Curve_unit_test (curve_id_sr1)
 helper.print_devider('double', 1)
 
-curve_id = 415 # secp256r1
-ECC_unit_test(curve_id)
-
 #####################################
-curve_id = 714 # secp256k1
-Curve_unit_test (curve_id)
-
+# Point_Addition_HE test
+Point_Addition_HE_test(curve_id_sk1, 100)
 helper.print_devider('double', 1)
 
-curve_id = 415 # secp256r1
-Curve_unit_test (curve_id)
-
+#####################################
+# signature gen/ verify test
+Sig_Verify_unit_test(curve_id_sk1, 100)
+helper.print_devider('double', 1)
+Sig_Verify_unit_test(curve_id_sr1, 100)
+helper.print_devider('double', 1)
 
 #####################################
-#oint_Addition_HE_test(714, 100)
+# ECDH test
 
-Sig_Verify_unit_test(714, 100)
-Sig_Verify_unit_test(415, 100)
+ECDH_unit_test(curve_id_sk1, 100)
+helper.print_devider('double', 1)
+ECDH_unit_test(curve_id_sr1, 100)
+helper.print_devider('double', 1)
