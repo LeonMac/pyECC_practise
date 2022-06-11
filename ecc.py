@@ -18,7 +18,7 @@ class ECP:
         self.x_ = P[0]
         self.y_ = P[1]
         if self.is_Unit_Point():
-            log ('w', "This is the UNIT Point!")
+            log('w', "This is the UNIT Point!")
 
     def is_Unit_Point(self):
         if self.x_ == 0 and self.y_ == 0:
@@ -67,14 +67,14 @@ class ECC:
 
         assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
         
-        log ('i', f"EC Curve: {self.name} init done" )
+        log('i', f"EC Curve: {self.name} init done" )
 
     def ECP_on_curve(self, P: ECP):
         left  = (P.y_** 2) % self.p_
         right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
         on_curve = (left == right)
         if not on_curve:
-            log ('e', "Priovided Point is NOT on curve: ")
+            log('e', "Provided Point is NOT on curve: ")
             P.print_point('hex')
 
         return on_curve

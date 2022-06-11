@@ -20,15 +20,25 @@ def print_devider (method: str, n):
         i+=1
     pass
 
+from config import LOG_SHOW_CFG as scfg
 def log (level: str, msg: str ):
     '''simple log output w/ different color'''
     if   level == 'i':
-        print(txtcol.GRE + '[INFO]: ' + msg + txtcol.RST)
+        if scfg['LOG_I']:
+            print(txtcol.RST + '[INFO]: ' + msg + txtcol.RST)
     elif level == 'd':
-        print(txtcol.CYA + '[DEBG]: ' + msg + txtcol.RST)      
+        if scfg['LOG_D']:
+            print(txtcol.CYA + '[DEBG]: ' + msg + txtcol.RST)      
     elif level == 'w':
-        print(txtcol.YEL + '[WARN]: ' + msg + txtcol.RST)
+        if scfg['LOG_W']:
+            print(txtcol.YEL + '[WARN]: ' + msg + txtcol.RST)
     elif level == 'e':
-        print(txtcol.RED + '[ERRO]: ' + msg + txtcol.RST)
+        if scfg['LOG_E']:
+            print(txtcol.RED + '[ERRO]: ' + msg + txtcol.RST)
+    elif level == 'm':
+        if scfg['LOG_M']:
+            print(txtcol.GRE + '[MESG]: ' + msg + txtcol.RST)
+    else:
+        assert False, f"incorrect log level {level}, please double check!"
     pass
 

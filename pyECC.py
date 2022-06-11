@@ -40,7 +40,7 @@ class ECC_Curve ():
             self.p  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
             self.name = "secp256r1"
         else:
-            assert True, f"Un-support curve id {curve_id}!"
+            assert False, f"Un-support curve id {curve_id}!"
 
         self.G  = ECP( (self.Gx, self.Gy) )
         self.U  = UNIT
@@ -53,7 +53,7 @@ class ECC_Curve ():
             log('d', f"given privkey = 0x%064x" %(k) )
             
             #not work yet log('d', f"'given privkey = {format(k, "#04x")"0x%064x" %(k) )
-            log('i', "Generated Pubkey:" )
+            log('d', "Generated Pubkey:" )
             Pubkey.print_point('hex')
         
         return Pubkey
@@ -134,7 +134,7 @@ def Sig_Verify_unit_test(curve_id, test_round):
     ''' signature generate and verify test '''
     from hash_lib import hash_256 as sha256
     log_div('line', 1)
-    log ('i', f"Signature generate+signature verify test, plan to run %d" %(test_round))
+    log('m', f"Signature generate+signature verify test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -154,7 +154,7 @@ def Sig_Verify_unit_test(curve_id, test_round):
         
         i+=1
     
-    log ('i', f"Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
+    log('m', f"Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
     log_div('line', 1)
 
     return test_pass
@@ -162,7 +162,7 @@ def Sig_Verify_unit_test(curve_id, test_round):
 
 def ECDH_unit_test(curve_id, test_round):
     ''' ECDH test '''
-    log ('i', f"ECDH test, plan to run %d" %(test_round))
+    log('m', f"ECDH test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -187,7 +187,7 @@ def ECDH_unit_test(curve_id, test_round):
 
         i += 1
     
-    log ('i', f"EDCH test round %d, %d pass" %(test_round, test_pass))
+    log('m', f"EDCH test round %d, %d pass" %(test_round, test_pass))
     log_div('line', 1)
 
     return test_pass
@@ -201,42 +201,42 @@ def ECDH_unit_test(curve_id, test_round):
 format_list = ['dec', 'hex']
 def ECC_unit_test (curve_id:int, format = 'dec'):
     '''unit test for Point_Add Point_Double
-       result canbe compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+       result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
     '''
-    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
-    assert format in format_list,  log('i', f"priovided format ={format} is not supported!")
-
+    assert curve_id in CURVE_LIST, log('e', f"priovided curve_id ={curve_id} is not supported!")
+    assert format in format_list,  log('e', f"priovided format ={format} is not supported!")
+    
     curve_ins = ECC_Curve(curve_id)
     #unit test: Point Double
-    log('i', "Point Double unit test: dG = G+G")
+    log('m', "Point Double unit test: dG = G+G")
     dG = curve_ins.curve.Point_Dbl(curve_ins.G)
     dG.print_point(format)
     log_div('line',1)
 
     #unit test: Point Add: 
-    log('i', "Point Add unit test: tG = dG+G")
+    log('m', "Point Add unit test: tG = dG+G")
     tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
     tG.print_point(format)
     log_div('line',1)
 
     #unit test: Point Add:
-    log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
+    log('m',"Point Add unit test: Unit(0,0) = tG+tGn")
     tGn = tG.neg_point(curve_ins.p)
     U = curve_ins.curve.Point_Add(tG, tGn)
     U.print_point(format)
     log_div('line',1)
 
     #unit test: Point Add General: 
-    log ('i', "Point Add General unit test 0: dG = G + G")
+    log('m', "Point Add General unit test 0: dG = G + G")
     dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
     dG.print_point(format)
-    log ('i', "Point Add General unit test 1: tG = dG + G")
+    log('m', "Point Add General unit test 1: tG = dG + G")
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
     tG.print_point(format)
-    log ('i', "Point Add General unit test 2: tG = tG + Uint")
+    log('m', "Point Add General unit test 2: tG = tG + Uint")
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
     tG_plus_I.print_point(format)
-    log ('i', "Point Add General unit test 3: Unit = tG + tGn")
+    log('m', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point(curve_ins.p)
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
     tG_plus_tGn.print_point(format)
@@ -245,20 +245,20 @@ def ECC_unit_test (curve_id:int, format = 'dec'):
     #unit test: Point Multiply:
     k = 111
     method = 0
-    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point(format)
 
     method = 1
-    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point(format)
     log_div('line',1)
 
     k = rand.randint(1, curve_ins.n )
-    log ('i', "Point Mult unit test 2: k random ")
-    log ('d', f"k = 0x%064x" %(k) )
-    log ('d', f"k = 0d%d" %(k) )
+    log('m', "Point Mult unit test 2: kG, k random ")
+    log('d', f"k = 0x%064x" %(k) )
+    log('d', f"k = 0d%d" %(k) )
     kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
     kG0.print_point(format)
 
@@ -273,18 +273,16 @@ def Curve_unit_test (curve_id):
     curve_ins = ECC_Curve(curve_id)
 
     k = rand.randint(1, curve_ins.n )
-    log ('i', "Pubkey gen unit test:")
-    log ('d', "PrivKey = 0d%d" %(k) )
+    log('m', "Pubkey gen unit test:")
+    log('d', "PrivKey = 0d%d" %(k) )
     Pubkey = curve_ins.PubKey_Gen(k, True)
     log_div('line', 1)
-    
-    pass
 
 
 def Point_Addition_HE_test (curve_id, test_round):
     '''Point Add homomorphic encryption test '''
     assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
-    log ('i', f"Point Add homomorphic encryption test, plan to run %d" %(test_round))
+    log('m', f"Point Add homomorphic encryption test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -311,12 +309,12 @@ def Point_Addition_HE_test (curve_id, test_round):
         if kG_0.is_equal(kG_1) :
             test_pass +=1
         else:
-            log ('i', f"Test round %d of %d fail" %(i, test_round))
+            log('e', f"Test round %d of %d fail" %(i, test_round))
             kG_0.print_point('hex')
             kG_1.print_point('hex')
 
         i+=1
-    log ('i', f"Total test round %d, %d pass" %(test_round, test_pass))
+    log('m', f"Total test round %d, %d pass" %(test_round, test_pass))
     log_div('line', 1)
 
     return test_pass
@@ -327,6 +325,9 @@ def Point_Addition_HE_test (curve_id, test_round):
 ## main ##
 if __name__ == '__main__':
     iter = 100
+    log('m', "For check deatil, enable LOG_I/LOG_D option in config.py, and compare the result with online tools : http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html")
+    import timeit
+    
     for cid in CURVE_LIST:
         # ecc library test
         ECC_unit_test(cid)
@@ -337,14 +338,23 @@ if __name__ == '__main__':
         log_div('double', 1)
 
         # EC Point_Addition_HE test
+        begin    = timeit.default_timer()
         Point_Addition_HE_test(cid, iter)
+        duration = timeit.default_timer() - begin
+        log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
         log_div('double', 1)
 
         # signature gen/ verify test
+        begin    = timeit.default_timer()
         Sig_Verify_unit_test(cid, iter)
+        duration = timeit.default_timer() - begin
+        log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
         log_div('double', 1)
 
         # ECDH test
+        begin    = timeit.default_timer()
         ECDH_unit_test(cid, iter)
+        duration = timeit.default_timer() - begin
+        log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
         log_div('double', 1)
    
