@@ -1,12 +1,10 @@
 ''' python version need > 3.5'''
 
-
 from random import SystemRandom
-#from xmlrpc.client import boolean 
 rand = SystemRandom()   # cryptographic random byte generator
 
-import helper
 import modulo
+from log import log
 
 ###################################################
 ## ECP = EC Point
@@ -20,7 +18,7 @@ class ECP:
         self.x_ = P[0]
         self.y_ = P[1]
         if self.is_Unit_Point():
-            print ("This is the Unit Point!")
+            log ('w', "This is the UNIT Point!")
 
     def is_Unit_Point(self):
         if self.x_ == 0 and self.y_ == 0:
@@ -40,16 +38,16 @@ class ECP:
         ret = (self.x_, mod - self.y_)
         return ECP(ret)
 
-    def print_point(self, mode):
-        if mode == 'hex':
-            print("Point.x(affine): ", hex( self.x_ ) )
-            print("Point.y(affine): ", hex( self.y_ ) )
-        elif mode == 'dec':
-            print("Point.x(affine): ", self.x_ ) 
-            print("Point.y(affine): ", self.y_ )
+    def print_point(self, format):
+        if format == 'hex':
+            log('d', f"Point.x(affine): {hex( self.x_ )}" )
+            log('d', f"Point.y(affine): {hex( self.y_ )}" )
+        elif format == 'dec':
+            log('d', f"Point.x(affine): {self.x_ }") 
+            log('d', f"Point.y(affine): {self.y_ }")
 
-# define Global constant Unit Point by using (0,0)
-Unit = ECP ( (0,0) )
+# define Global constant UNIT Point by using (0,0)
+UNIT = ECP ( (0,0) )
 
 # ECC = EC Curve
 class ECC:
@@ -69,14 +67,14 @@ class ECC:
 
         assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
         
-        print ("EC Curve: ", self.name, "init done" )
+        log ('i', f"EC Curve: {self.name} init done" )
 
     def ECP_on_curve(self, P: ECP):
         left  = (P.y_** 2) % self.p_
         right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
         on_curve = (left == right)
         if not on_curve:
-            print ("Priovided Point is NOT on curve: ")
+            log ('e', "Priovided Point is NOT on curve: ")
             P.print_point('hex')
 
         return on_curve
@@ -109,7 +107,7 @@ class ECC:
         if P.is_Unit_Point():
             return Q
         if Q.is_reverse(P, self.p_):
-            return Unit
+            return UNIT
 
         # slope m
         m = ( P.y_ - Q.y_  ) % self.p_
@@ -136,7 +134,7 @@ class ECC:
         if P.is_Unit_Point():
             return Q
         if Q.is_reverse(P, self.p_):
-            return Unit
+            return UNIT
         
         if P.is_equal(Q):
         # slope m for Dbl
@@ -173,10 +171,10 @@ class ECC:
         assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"
 
         if (k % self.n_) == 0 or Pin.is_Unit_Point():
-            return Unit
+            return UNIT
 
         i = k
-        R = Unit
+        R = UNIT
         P = Pin
         if method == 0:
             while i:

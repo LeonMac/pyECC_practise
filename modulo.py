@@ -29,7 +29,7 @@ def mod_inv_unittest (iteration):
     # import helper as hlp
     x = rand.randint(1, (1<<256)-1 )
     m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-    import helper as hlp
+    import log as hlp
     iter = 0
     pass_test = 0
     while iter < iteration:

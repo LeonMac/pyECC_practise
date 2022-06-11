@@ -3,9 +3,11 @@
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
-import helper
+from log import log
+from log import print_devider as log_div
+
 import modulo
-import ecc
+from ecc import ECC, ECP, UNIT
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
@@ -38,19 +40,20 @@ class ECC_Curve ():
             self.p  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
             self.name = "secp256r1"
         else:
-            print ("Un-support curve!")
-            return
+            assert True, f"Un-support curve id {curve_id}!"
 
-        self.G  = ecc.ECP( (self.Gx, self.Gy) )
-        self.U  = ecc.Unit
+        self.G  = ECP( (self.Gx, self.Gy) )
+        self.U  = UNIT
 
-        self.curve = ecc.ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
+        self.curve = ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
     
     def PubKey_Gen(self, k, verb: bool):
         Pubkey = self.curve.Point_Mult(k, self.curve.G_, 0)
         if (verb):
-            print("given privkey = 0x%064x" %(k) )
-            print("Generated Pubkey:" )
+            log('d', f"given privkey = 0x%064x" %(k) )
+            
+            #not work yet log('d', f"'given privkey = {format(k, "#04x")"0x%064x" %(k) )
+            log('i', "Generated Pubkey:" )
             Pubkey.print_point('hex')
         
         return Pubkey
@@ -87,7 +90,7 @@ class ECC_Curve ():
         u2 = (r * s_inv) % self.curve.n_
 
         u1G = self.curve.Point_Mult(u1, self.curve.G_, 0)
-        u2P = self.curve.Point_Mult(u2, ecc.ECP((pub_x, pub_y)), 0)
+        u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y)), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
 
@@ -95,7 +98,7 @@ class ECC_Curve ():
         return ret
 
     ###############################################
-    def ECDH (self, self_priv_key, counter_part_PubKey: ecc.ECP):
+    def ECDH (self, self_priv_key, counter_part_PubKey: ECP):
         assert self.curve.ECP_on_curve(counter_part_PubKey) , "Provided Pubkey is not on curve!"
         assert not self_priv_key  > self.curve.n_ , "Provided private key > curve n!"
 
@@ -105,10 +108,10 @@ class ECC_Curve ():
 
     ###############################################
 
-    def Encryption(self, Msg:str, Pub:ecc.ECP ):
+    def Encryption(self, Msg:str, Pub:ECP ):
         '''not yet done, TBD'''
         assert self.curve.ECP_on_curve(Pub) , "Provided Pubkey is not on curve!"
-        
+
 
         dP = self.U
         while (dP == self.U):
@@ -129,14 +132,15 @@ class ECC_Curve ():
 ###########################################################
 def Sig_Verify_unit_test(curve_id, test_round):
     ''' signature generate and verify test '''
-    helper.print_devider('line', 1)
-    print ("Signature generate+signature verify test, plan to run %d" %(test_round))
+    from hash_lib import hash_256 as sha256
+    log_div('line', 1)
+    log ('i', f"Signature generate+signature verify test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
     test_pass = 0
     msg = "This is a masterpiece from Tiger.Tang"
-    dig = helper.hash_256(msg)
+    dig = sha256(msg)
 
     while i < test_round: 
 
@@ -150,15 +154,15 @@ def Sig_Verify_unit_test(curve_id, test_round):
         
         i+=1
     
-    print ("Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
-    helper.print_devider('line', 1)
+    log ('i', f"Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
+    log_div('line', 1)
 
     return test_pass
 
 
 def ECDH_unit_test(curve_id, test_round):
     ''' ECDH test '''
-    print ("ECDH test, plan to run %d" %(test_round))
+    log ('i', f"ECDH test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -183,8 +187,8 @@ def ECDH_unit_test(curve_id, test_round):
 
         i += 1
     
-    print ("EDCH test round %d, %d pass" %(test_round, test_pass))
-    helper.print_devider('line', 1)
+    log ('i', f"EDCH test round %d, %d pass" %(test_round, test_pass))
+    log_div('line', 1)
 
     return test_pass
    
@@ -199,88 +203,88 @@ def ECC_unit_test (curve_id:int, format = 'dec'):
     '''unit test for Point_Add Point_Double
        result canbe compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
     '''
-    assert curve_id in CURVE_LIST, helper.log('i', f"priovided curve_id ={curve_id} is not supported!")
-    assert format in format_list,  helper.log('i', f"priovided format ={format} is not supported!")
+    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
+    assert format in format_list,  log('i', f"priovided format ={format} is not supported!")
 
     curve_ins = ECC_Curve(curve_id)
     #unit test: Point Double
-    helper.log('i', "Point Double unit test: dG = G+G")
+    log('i', "Point Double unit test: dG = G+G")
     dG = curve_ins.curve.Point_Dbl(curve_ins.G)
     dG.print_point(format)
-    helper.print_devider('line',1)
+    log_div('line',1)
 
     #unit test: Point Add: 
-    helper.log('i', "Point Add unit test: tG = dG+G")
+    log('i', "Point Add unit test: tG = dG+G")
     tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
     tG.print_point(format)
-    helper.print_devider('line',1)
+    log_div('line',1)
 
     #unit test: Point Add:
-    helper.log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
+    log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
     tGn = tG.neg_point(curve_ins.p)
     U = curve_ins.curve.Point_Add(tG, tGn)
     U.print_point(format)
-    helper.print_devider('line',1)
+    log_div('line',1)
 
     #unit test: Point Add General: 
-    helper.log ('i', "Point Add General unit test 0: dG = G + G")
+    log ('i', "Point Add General unit test 0: dG = G + G")
     dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
     dG.print_point(format)
-    helper.log ('i', "Point Add General unit test 1: tG = dG + G")
+    log ('i', "Point Add General unit test 1: tG = dG + G")
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
     tG.print_point(format)
-    helper.log ('i', "Point Add General unit test 2: tG = tG + Uint")
+    log ('i', "Point Add General unit test 2: tG = tG + Uint")
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
     tG_plus_I.print_point(format)
-    helper.log ('i', "Point Add General unit test 3: Unit = tG + tGn")
+    log ('i', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point(curve_ins.p)
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
     tG_plus_tGn.print_point(format)
-    helper.print_devider('line',1)
+    log_div('line',1)
 
     #unit test: Point Multiply:
     k = 111
     method = 0
-    helper.log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point(format)
 
     method = 1
-    helper.log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
+    log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
     kG.print_point(format)
-    helper.print_devider('line',1)
+    log_div('line',1)
 
     k = rand.randint(1, curve_ins.n )
-    helper.log ('i', "Point Mult unit test 2: k random ")
-    print ("k = 0x%064x" %(k) )
-    print ("k = 0d%d" %(k) )
+    log ('i', "Point Mult unit test 2: k random ")
+    log ('d', f"k = 0x%064x" %(k) )
+    log ('d', f"k = 0d%d" %(k) )
     kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
     kG0.print_point(format)
 
     kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
     kG1.print_point(format)
-    helper.print_devider('line',1)
+    log_div('line',1)
 
 #####
 def Curve_unit_test (curve_id):
     '''do unit test for curve unit test '''
-    assert curve_id in CURVE_LIST, helper.log('i', f"priovided curve_id ={curve_id} is not supported!")
+    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
     curve_ins = ECC_Curve(curve_id)
 
     k = rand.randint(1, curve_ins.n )
-    helper.log ('i', "Pubkey gen unit test:")
-    print ("PrivKey = 0d%d" %(k) )
+    log ('i', "Pubkey gen unit test:")
+    log ('d', "PrivKey = 0d%d" %(k) )
     Pubkey = curve_ins.PubKey_Gen(k, True)
-    helper.print_devider('line', 1)
+    log_div('line', 1)
     
     pass
 
 
 def Point_Addition_HE_test (curve_id, test_round):
     '''Point Add homomorphic encryption test '''
-    assert curve_id in CURVE_LIST, helper.log('i', f"priovided curve_id ={curve_id} is not supported!")
-    print ("Point Add homomorphic encryption test, plan to run %d" %(test_round))
+    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
+    log ('i', f"Point Add homomorphic encryption test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -307,13 +311,13 @@ def Point_Addition_HE_test (curve_id, test_round):
         if kG_0.is_equal(kG_1) :
             test_pass +=1
         else:
-            print ("Test round %d of %d fail" %(i, test_round))
+            log ('i', f"Test round %d of %d fail" %(i, test_round))
             kG_0.print_point('hex')
             kG_1.print_point('hex')
 
         i+=1
-    print ("Total test round %d, %d pass" %(test_round, test_pass))
-    helper.print_devider('line', 1)
+    log ('i', f"Total test round %d, %d pass" %(test_round, test_pass))
+    log_div('line', 1)
 
     return test_pass
    
@@ -326,21 +330,21 @@ if __name__ == '__main__':
     for cid in CURVE_LIST:
         # ecc library test
         ECC_unit_test(cid)
-        helper.print_devider('double', 1)
+        log_div('double', 1)
 
         # EC Curve test
         Curve_unit_test (cid)
-        helper.print_devider('double', 1)
+        log_div('double', 1)
 
         # EC Point_Addition_HE test
         Point_Addition_HE_test(cid, iter)
-        helper.print_devider('double', 1)
+        log_div('double', 1)
 
         # signature gen/ verify test
         Sig_Verify_unit_test(cid, iter)
-        helper.print_devider('double', 1)
+        log_div('double', 1)
 
         # ECDH test
         ECDH_unit_test(cid, iter)
-        helper.print_devider('double', 1)
+        log_div('double', 1)
    
