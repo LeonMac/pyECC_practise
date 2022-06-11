@@ -1,6 +1,4 @@
 ''' python version need > 3.5'''
-import helper
-
 ## reverse modular
 # From http://rosettacode.org/wiki/Modular_inverse#Python
 def half_extended_gcd(aa, bb):
