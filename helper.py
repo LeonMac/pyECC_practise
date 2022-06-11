@@ -54,7 +54,7 @@ if __name__ == '__main__':
     #https://docs.python.org/3/library/subprocess.html#subprocess.run
     import random
     import subprocess
-    msg_dict = ['I love you', 'blablabla', str(random.randint(1, 1<<255))]
+    msg_dict = ['I love you', 'blablabla', str(random.randint(1, 1<<256 -1))]
     test_cnt = len(msg_dict)
     pass_cnt = 0
 
@@ -70,5 +70,5 @@ if __name__ == '__main__':
         log('i', f"dig_shell       = {dig_shell}")
         if dig_test_actual in dig_shell:
             pass_cnt += 1
-            
-    log('d', f"total test case = {test_cnt}, pass_cnt = {pass_cnt}, test passed: {test_cnt == pass_cnt}")
+
+    log('d', f"total hash256 test case = {test_cnt}, pass_cnt = {pass_cnt}, test passed: {test_cnt == pass_cnt}")

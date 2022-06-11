@@ -1,18 +1,22 @@
 ''' python version need > 3.5'''
 
 from random import SystemRandom
-#from xmlrpc.client import boolean 
 rand = SystemRandom()   # cryptographic random byte generator
 
 import helper
 import modulo
 import ecc
 
+SECP256K1 = 714 # openssl curve_id for secp256k1
+SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
+
+CURVE_LIST = [SECP256K1, SECP256R1]
+
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
     # secp256k1 parameters
     def __init__(self, curve_id):
-        if (curve_id == 714): # openssl curve_id for secp256k1
+        if (curve_id == SECP256K1): # openssl curve_id for secp256k1
             self.a  = 0
             self.b  = 7
             self.n  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
@@ -23,7 +27,7 @@ class ECC_Curve ():
             self.p  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
             self.name = "secp256k1"
 
-        elif (curve_id == 415): # openssl curve_id for secp256r1=prime256v1
+        elif (curve_id == SECP256R1): # openssl curve_id for secp256r1=prime256v1
             self.a  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC
             self.b  = 0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B
             self.n  = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
@@ -102,7 +106,9 @@ class ECC_Curve ():
     ###############################################
 
     def Encryption(self, Msg:str, Pub:ecc.ECP ):
+        '''not yet done, TBD'''
         assert self.curve.ECP_on_curve(Pub) , "Provided Pubkey is not on curve!"
+        
 
         dP = self.U
         while (dP == self.U):
@@ -188,47 +194,48 @@ def ECDH_unit_test(curve_id, test_round):
 ## ECC unit test
 ## this website can generate test vector and comapre with our result
 ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
-def ECC_unit_test (curve_id):
-    '''do unit test for Point_Add Point_Double print test vector
-       compare the result with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+format_list = ['dec', 'hex']
+def ECC_unit_test (curve_id:int, format = 'dec'):
+    '''unit test for Point_Add Point_Double
+       result canbe compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
     '''
+    assert curve_id in CURVE_LIST, helper.log('i', f"priovided curve_id ={curve_id} is not supported!")
+    assert format in format_list,  helper.log('i', f"priovided format ={format} is not supported!")
+
     curve_ins = ECC_Curve(curve_id)
     #unit test: Point Double
     helper.log('i', "Point Double unit test: dG = G+G")
     dG = curve_ins.curve.Point_Dbl(curve_ins.G)
-    # dG.print_point('hex')
-    dG.print_point('dec')
+    dG.print_point(format)
     helper.print_devider('line',1)
 
     #unit test: Point Add: 
     helper.log('i', "Point Add unit test: tG = dG+G")
     tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
-    # tG.print_point('hex')
-    tG.print_point('dec')
+    tG.print_point(format)
     helper.print_devider('line',1)
 
     #unit test: Point Add:
     helper.log ('i',"Point Add unit test: Unit(0,0) = tG+tGn")
     tGn = tG.neg_point(curve_ins.p)
     U = curve_ins.curve.Point_Add(tG, tGn)
-    U.print_point('hex')
-    # Unit.print_point('dec')
+    U.print_point(format)
     helper.print_devider('line',1)
 
     #unit test: Point Add General: 
     helper.log ('i', "Point Add General unit test 0: dG = G + G")
     dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
-    dG.print_point('dec')
+    dG.print_point(format)
     helper.log ('i', "Point Add General unit test 1: tG = dG + G")
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
-    tG.print_point('dec')
+    tG.print_point(format)
     helper.log ('i', "Point Add General unit test 2: tG = tG + Uint")
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
-    tG_plus_I.print_point('dec')
+    tG_plus_I.print_point(format)
     helper.log ('i', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point(curve_ins.p)
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
-    tG_plus_tGn.print_point('dec')
+    tG_plus_tGn.print_point(format)
     helper.print_devider('line',1)
 
     #unit test: Point Multiply:
@@ -236,12 +243,12 @@ def ECC_unit_test (curve_id):
     method = 0
     helper.log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
-    kG.print_point('dec')
+    kG.print_point(format)
 
     method = 1
     helper.log ('i', "Point Mult unit test 0: kG，k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
-    kG.print_point('dec')
+    kG.print_point(format)
     helper.print_devider('line',1)
 
     k = rand.randint(1, curve_ins.n )
@@ -249,15 +256,16 @@ def ECC_unit_test (curve_id):
     print ("k = 0x%064x" %(k) )
     print ("k = 0d%d" %(k) )
     kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
-    kG0.print_point('dec')
+    kG0.print_point(format)
 
     kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
-    kG1.print_point('dec')
+    kG1.print_point(format)
     helper.print_devider('line',1)
 
 #####
 def Curve_unit_test (curve_id):
     '''do unit test for curve unit test '''
+    assert curve_id in CURVE_LIST, helper.log('i', f"priovided curve_id ={curve_id} is not supported!")
     curve_ins = ECC_Curve(curve_id)
 
     k = rand.randint(1, curve_ins.n )
@@ -271,6 +279,7 @@ def Curve_unit_test (curve_id):
 
 def Point_Addition_HE_test (curve_id, test_round):
     '''Point Add homomorphic encryption test '''
+    assert curve_id in CURVE_LIST, helper.log('i', f"priovided curve_id ={curve_id} is not supported!")
     print ("Point Add homomorphic encryption test, plan to run %d" %(test_round))
     curve_ins = ECC_Curve(curve_id)
 
@@ -312,40 +321,26 @@ def Point_Addition_HE_test (curve_id, test_round):
 
 ################################################
 ## main ##
+if __name__ == '__main__':
+    iter = 100
+    for cid in CURVE_LIST:
+        # ecc library test
+        ECC_unit_test(cid)
+        helper.print_devider('double', 1)
 
-# curve_id, same as openssl
-curve_id_sk1 = 714 # secp256k1
-curve_id_sr1 = 415 # secp256r1
+        # EC Curve test
+        Curve_unit_test (cid)
+        helper.print_devider('double', 1)
 
-# ecc library test
-ECC_unit_test(curve_id_sk1)
-helper.print_devider('double', 1)
-ECC_unit_test(curve_id_sr1)
-helper.print_devider('double', 1)
-#####################################
+        # EC Point_Addition_HE test
+        Point_Addition_HE_test(cid, iter)
+        helper.print_devider('double', 1)
 
-# Curve test
-Curve_unit_test (curve_id_sk1)
-helper.print_devider('double', 1)
-Curve_unit_test (curve_id_sr1)
-helper.print_devider('double', 1)
+        # signature gen/ verify test
+        Sig_Verify_unit_test(cid, iter)
+        helper.print_devider('double', 1)
 
-#####################################
-# Point_Addition_HE test
-Point_Addition_HE_test(curve_id_sk1, 100)
-helper.print_devider('double', 1)
-
-#####################################
-# signature gen/ verify test
-Sig_Verify_unit_test(curve_id_sk1, 100)
-helper.print_devider('double', 1)
-Sig_Verify_unit_test(curve_id_sr1, 100)
-helper.print_devider('double', 1)
-
-#####################################
-# ECDH test
-
-ECDH_unit_test(curve_id_sk1, 100)
-helper.print_devider('double', 1)
-ECDH_unit_test(curve_id_sr1, 100)
-helper.print_devider('double', 1)
+        # ECDH test
+        ECDH_unit_test(cid, iter)
+        helper.print_devider('double', 1)
+   

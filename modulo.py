@@ -26,17 +26,18 @@ from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
 def mod_inv_unittest (iteration):
+    # import helper as hlp
     x = rand.randint(1, (1<<256)-1 )
     m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-
+    import helper as hlp
     iter = 0
     pass_test = 0
     while iter < iteration:
         mod0 = modular_inverse (x, m)
         mod1 = modular_exp_inv (x, m)
-        same = (mod0 == mod1)
-        if not same:
-            print(txtcol.RED + "iteration #", iter, "fail: " + txtcol.RST)
+        if (mod0 != mod1):
+
+            print(hlp.txtcol.RED + "iteration #", iter, "fail: " + hlp.txtcol.RST)
             print("x   : 0x%064x" %(x) )
             print("m   : 0x%064x" %(m) )
             print("mod0: 0x%064x" %(mod0) )
@@ -48,8 +49,8 @@ def mod_inv_unittest (iteration):
 
     return pass_test
 
+if __name__ == '__main__':
 # unit test: modular inverse 
-def unit_test():
     iter = 100
     ret = mod_inv_unittest(iter)
     print ("modular inv unit test: total %d iteration, pass %d " %(iter, ret) )
