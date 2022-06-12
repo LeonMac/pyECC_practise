@@ -26,12 +26,12 @@ class ECP:
         else:
             return False
 
-    def is_reverse(self, Pin, p):
-        if (self.x_ == Pin.x_) and (self.y_ == p - Pin.y_):
+    def is_reverse(self, P, p):
+        if (self.x_ ==P.x_) and (self.y_ == p - P.y_):
             return True
 
-    def is_equal(self, Pin):
-        if (self.x_ == Pin.x_) and (self.y_ == Pin.y_):
+    def is_equal(self, P):
+        if (self.x_ == P.x_) and (self.y_ == P.y_):
             return True
     
     def neg_point(self, mod):

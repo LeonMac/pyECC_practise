@@ -1,6 +1,8 @@
 ''' python version need > 3.5'''
 
 from random import SystemRandom
+
+from scipy.misc import derivative
 rand = SystemRandom()   # cryptographic random byte generator
 
 from log import log
@@ -16,7 +18,6 @@ CURVE_LIST = [SECP256K1, SECP256R1]
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
-    # secp256k1 parameters
     def __init__(self, curve_id):
         if (curve_id == SECP256K1): # openssl curve_id for secp256k1
             self.a  = 0
@@ -45,22 +46,24 @@ class ECC_Curve ():
         self.G  = ECP( (self.Gx, self.Gy) )
         self.U  = UNIT
 
-        self.curve = ECC(self.a,self.b,self.n,self.p,self.G, curve_id, self.name)
+        self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name)
     
-    def PubKey_Gen(self, k, verb: bool):
+    def PubKey_Gen(self, k:int, verb: bool):
+        '''Input: scalar k
+           Output kG '''
         Pubkey = self.curve.Point_Mult(k, self.curve.G_, 0)
         if (verb):
             log('d', f"given privkey = 0x%064x" %(k) )
-            
-            #not work yet log('d', f"'given privkey = {format(k, "#04x")"0x%064x" %(k) )
             log('d', "Generated Pubkey:" )
             Pubkey.print_point('hex')
         
         return Pubkey
 
     def Sig_Gen(self, priv_key, randk, sh256_dig, formt:str, verb: bool):
-        '''Input:  priv_key, randk, sha256_dig, pub_key format (comp|non-comp)'''
-        '''Output: sig_r, sig_s, dig, pub_key_x, pub_key_y'''
+        ''' Elliptic Curve Digital Signature Algorithm (ECDSA)
+        Input:  priv_key, randk, sha256_dig, pub_key format (comp|non-comp)
+        Output: sig_r, sig_s, dig, pub_key_x, pub_key_y
+        '''
         assert not priv_key  > self.curve.n_ , "Provided private key > curve n!"
         assert not randk > self.curve.n_ , "Provided randomk > curve n!"
         #assert not sh256_dig <= self.curve.n_ , "Provided digest > curve n!"
@@ -108,15 +111,19 @@ class ECC_Curve ():
 
     ###############################################
 
+
     def Encryption(self, Msg:str, Pub:ECP ):
-        '''not yet done, TBD'''
+        '''not yet done, TBD
+        Elliptic Curve Integrated Encryption Scheme (ECIES)
+        '''
         assert self.curve.ECP_on_curve(Pub) , "Provided Pubkey is not on curve!"
 
+        M = bytes(Msg, encoding="utf-8")
 
-        dP = self.U
-        while (dP == self.U):
-            d  = rand.randint(1, self.curve.n_ )
-            dP = self.curve.Point_Mult(d, self.curve.G_, 0)
+        Q = self.U
+        while (Q == self.U):
+            d  = rand.randint(1, self.curve.n_ )            # priv key
+            Q  = self.curve.Point_Mult(d, self.curve.G_, 0) # pub  key
 
         R  = self.Unit
         while (R == self.U):
@@ -130,7 +137,7 @@ class ECC_Curve ():
         pass
 
 ###########################################################
-def Sig_Verify_unit_test(curve_id, test_round):
+def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
     ''' signature generate and verify test '''
     from hash_lib import hash_256 as sha256
     log_div('line', 1)
@@ -139,16 +146,23 @@ def Sig_Verify_unit_test(curve_id, test_round):
 
     i = 0
     test_pass = 0
-    msg = "This is a masterpiece from Tiger.Tang"
-    dig = sha256(msg)
+    # msg = "This is a masterpiece from Tiger.Tang"
+    # dig = sha256(msg)
 
     while i < test_round: 
+        msg = str(rand.randint(1, curve_ins.n ))
+        dig = sha256(msg)
 
         priv_key = rand.randint(1, curve_ins.n )
         randk    = rand.randint(1, curve_ins.n )
 
-        pub_key  = curve_ins.PubKey_Gen(priv_key, False)
         r,s,z,x,y = curve_ins.Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+
+        # pub_key  = curve_ins.PubKey_Gen(priv_key, verb=False)
+        # P = (x,y)
+        # if not pub_key.is_equal(ECP(P)):
+        #     log('w', "Pubkey is different!")
+
         if curve_ins.Signature_Verify(r,s,z,x,y):
             test_pass+=1
         

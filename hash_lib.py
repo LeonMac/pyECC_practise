@@ -8,6 +8,14 @@ def hash_256(message: str):
     z = int(dig.hexdigest(),16)
     return z
 
+def hash_512(message: str):
+    import hashlib
+    """Returns the SHA256 hash of the provided message string."""
+    dig = hashlib.sha512()
+    dig.update( message.encode() ) # convert str to bytes
+    z = int(dig.hexdigest(),16)
+    return z
+
 def hash_test(msg):
     '''sha256 can be checked directly by linux command line '''
     '''for exp echo -n msg | sha256sum '''
