@@ -1,10 +1,16 @@
 ###########################################################
 
-def hash_256(message: str):
+def hash_256(message , msg_fmt = 'str' ):
     import hashlib
-    """Returns the SHA256 hash of the provided message string."""
+    """Returns the SHA256 hash of the provided message (str or byte str)"""
+    assert msg_fmt == 'str' or msg_fmt == 'bytes', f"not supported format ={msg_fmt}"
+
     dig = hashlib.sha256()
-    dig.update( message.encode() ) # convert str to bytes
+    if msg_fmt == 'str':
+        dig.update( message.encode() ) # convert str to bytes
+    else:
+        dig.update( message ) # bytes string
+
     z = int(dig.hexdigest(),16)
     return z
 
