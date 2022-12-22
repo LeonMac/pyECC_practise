@@ -17,8 +17,11 @@ class ECP:
 
         self.x_ = P[0]
         self.y_ = P[1]
+
         if self.is_Unit_Point():
             log('w', "This is the UNIT Point!")
+
+        self.y_even = (self.y_ & 0b1) # ry odd (1) even (0)
 
     def is_Unit_Point(self):
         if self.x_ == 0 and self.y_ == 0:
@@ -45,6 +48,26 @@ class ECP:
         elif format == 'dec':
             log('d', f"Point.x(affine): {self.x_ }") 
             log('d', f"Point.y(affine): {self.y_ }")
+    
+    def hex_str(self, format='xy', compress = False):
+        if   format == 'xy':
+            ret = "{:064x}".format(self.x_) + "{:064x}".format(self.y_)
+        elif format == 'x':
+            ret = "{:064x}".format(self.x_)
+        elif format == 'y':
+            ret = "{:064x}".format(self.y_)
+
+        if compress:
+            if self.y_even:
+                PC = '03'
+            else:
+                PC = '02'
+        elif compress == False:
+            PC = '04'
+        elif compress == None:
+            PC = ''
+        
+        return PC + ret
 
 # define Global constant UNIT Point by using (0,0)
 UNIT = ECP ( (0,0) )
@@ -79,9 +102,6 @@ class ECC:
 
         return on_curve
     
-    # def cal_slope0():
-    #     '''when P and Q are same points, i.e. for Point double'''
-
     def Point_Dbl (self, P: ECP):
         '''calculate R = P + P = 2P'''
         x = P.x_
@@ -165,7 +185,7 @@ class ECC:
         R = Rneg.neg_point(self.p_)
         return R
         
-    def Point_Mult(self, k, Pin: ECP, method):
+    def Point_Mult(self, k, Pin: ECP, method = 1):
         ''' Point multiply by scalar k'''
         assert not k < 0 , "Provided k < 0 !"
         assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"

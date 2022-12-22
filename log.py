@@ -8,7 +8,7 @@ class txtcol:
     RED = '\033[91m'
     RST = '\033[0m'
 
-def print_devider (method: str, n):
+def print_divider (method: str, n:int):
     '''helper format, add seperator line '''
     i = 0
     while i<n :
@@ -42,3 +42,15 @@ def log (level: str, msg: str ):
         assert False, f"incorrect log level {level}, please double check!"
     pass
 
+def hex_show(msg: str, C: str, hex_N:int = 8):
+    l = len(C)
+    log('d', f"{msg}")
+    print(txtcol.CYA + "\t", end = '')
+    for i in range (l):
+        print(C[i], end='')
+        if (i+1) % hex_N == 0:
+            print(' ', end ='')
+            if (i+1) % (hex_N*8) == 0:
+                print('\n\t', end ='')
+
+    print(txtcol.RST + "\n")
