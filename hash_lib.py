@@ -1,25 +1,39 @@
 ###########################################################
 
-def hash_256(message , msg_fmt = 'str' ):
-    import hashlib
+def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256'):
+
     """Returns the SHA256 hash of the provided message (str or byte str)"""
-    assert msg_fmt == 'str' or msg_fmt == 'bytes', f"not supported format ={msg_fmt}"
+    assert msg_fmt == 'str' or msg_fmt == 'bytes', f"not supported msg format = {msg_fmt}"
+    assert return_fmt == 'hex' or return_fmt == 'bytes', f"not supported return format = {return_fmt}"
+    assert sha_type == 'sha256' or sha_type == 'sm3', f"not supported sha type = {sha_type}"
 
-    dig = hashlib.sha256()
-    if msg_fmt == 'str':
-        dig.update( message.encode() ) # convert str to bytes
+    if sha_type == 'sha256':
+        import hashlib
+        dig = hashlib.sha256()
     else:
-        dig.update( message ) # bytes string
+        from pysmx.SM3 import SM3   # https://gitee.com/snowlandltd/snowland-smx-python
+        dig = SM3()
+    
+    if msg_fmt == 'str':
+        msg = message.encode("utf-8")   # convert str to bytes
+    else:
+        msg = message    # if it is already bytes string           
 
-    z = int(dig.hexdigest(),16)
-    return z
+    # log('i', f"msg = {msg}, type {type(msg)}")
+    dig.update( msg )   # hash digest
+
+    if return_fmt == 'hex':
+        return int(dig.hexdigest(), 16)
+    else :
+        return dig.digest()
+
 
 def hash_512(message: str):
     import hashlib
     """Returns the SHA256 hash of the provided message string."""
     dig = hashlib.sha512()
     dig.update( message.encode() ) # convert str to bytes
-    z = int(dig.hexdigest(),16)
+    z = int(dig.hexdigest(), 16)
     return z
 
 def hash_test(msg):
@@ -30,14 +44,17 @@ def hash_test(msg):
     print ("dig = 0x%064x" %(dig) )
 
 if __name__ == '__main__':
-    #https://docs.python.org/3/library/subprocess.html#subprocess.run
+    # https://docs.python.org/3/library/subprocess.html#subprocess.run
+    # https://the-x.cn/hash/ShangMi3Algorithm.aspx
+    
     import random
     import subprocess
     from log import log
-    msg_dict = ['I love you', 'blablabla', str(random.randint(1, 1<<256 -1))]
+    msg_dict = ['I love you', 'blablabla', 'abc', str(random.randint(1, 1<<256 -1))]
     test_cnt = len(msg_dict)
     pass_cnt = 0
 
+    log('i', f"sha256 test, compare with command line result-->")
     for msg in msg_dict:
         
         dig_test  = hex(hash_256 (msg))
@@ -51,4 +68,19 @@ if __name__ == '__main__':
         if dig_test_actual in dig_shell:
             pass_cnt += 1
 
-    log('d', f"total hash256 test case = {test_cnt}, pass_cnt = {pass_cnt}, test passed: {test_cnt == pass_cnt}")
+    log('i', f"total hash256 test case = {test_cnt}, pass_cnt = {pass_cnt}, test passed: {test_cnt == pass_cnt}")
+    log('i', f"\nsm3 test-->")
+
+    for msg in msg_dict:
+        dig_test  = hex(hash_256 (msg, 'str', 'hex', 'sm3'))
+        dig_test_actual = dig_test[2:]
+        log('i', f"msg = {msg}")
+        log('i', f"dig_test_actual = {dig_test_actual}")
+    
+    log('i', f"sm3 test vector from spec.-->")
+    hex_ = 0x64d20d27d0632957f8028c1e024f6b02edf23102a566c932ae8bd613a8e865fe656e6372797074696f6e207374616e6461726458d225eca784ae300a81a2d48281a828e1cedf11c4219099840265375077bf78
+    msg = bytes.fromhex(hex(hex_)[2:])
+    dig_test  = hex(hash_256 (msg, 'bytes', 'hex', 'sm3'))
+    dig_test_actual = dig_test[2:]
+    log('i', f"msg = {msg}, type {type(msg)}")
+    log('i', f"dig_test_actual = {dig_test_actual}")

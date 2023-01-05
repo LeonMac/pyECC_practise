@@ -1,20 +1,22 @@
-''' python version need > 3.5'''
+#!/usr/bin/env python3
 
+#import random
 from random import SystemRandom
-
-from scipy.misc import derivative
 rand = SystemRandom()   # cryptographic random byte generator
 
-from log import log
-from log import print_devider as log_div
+# from scipy.misc import derivative
+
+from log import log, hex_show
+from log import print_divider as log_div
 
 import modulo
 from ecc import ECC, ECP, UNIT
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
+SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
+SM2_TV_ID = 124 # 
 
-CURVE_LIST = [SECP256K1, SECP256R1]
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
@@ -28,7 +30,9 @@ class ECC_Curve ():
             self.Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
 
             self.p  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+            self.h  = 0x1
             self.name = "secp256k1"
+            self.family = "NIST"
 
         elif (curve_id == SECP256R1): # openssl curve_id for secp256r1=prime256v1
             self.a  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC
@@ -39,7 +43,36 @@ class ECC_Curve ():
             self.Gy = 0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
 
             self.p  = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+            self.h  = 0x1
             self.name = "secp256r1"
+            self.family = "NIST"
+
+        elif (curve_id == SM2_CV_ID): 
+            self.a  = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC
+            self.b  = 0x28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93
+            self.n  = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
+
+            self.Gx = 0x32c4ae2c1f1981195f9904466a39c9948fe30bbff2660be1715a4589334c74c7
+            self.Gy = 0xbc3736a2f4f6779c59bdcee36b692153d0a9877cc62a474002df32e52139f0a0
+
+            self.p  = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF
+            self.h  = 0x1
+            self.name = "sm2"
+            self.family = "SM2"
+
+        elif (curve_id == SM2_TV_ID): 
+            self.a  = 0x787968B4FA32C3FD2417842E73BBFEFF2F3C848B6831D7E0EC65228B3937E498
+            self.b  = 0x63E4C6D3B23B0C849CF84241484BFE48F61D59A5B16BA06E6E12D1DA27C5249A
+            self.n  = 0x8542D69E4C044F18E8B92435BF6FF7DD297720630485628D5AE74EE7C32E79B7
+
+            self.Gx = 0x421DEBD61B62EAB6746434EBC3CC315E32220B3BADD50BDC4C4E6C147FEDD43D
+            self.Gy = 0x0680512BCBB42C07D47349D2153B70C4E5D7FDFCBFA36EA1A85841B9E46E09A2
+
+            self.p  = 0x8542D69E4C044F18E8B92435BF6FF7DE457283915C45517D722EDB8B08F1DFC3
+            self.h  = 0x1
+            self.name = "sm2_test"
+            self.family = "SM2"
+
         else:
             assert False, f"Un-support curve id {curve_id}!"
 
@@ -51,7 +84,7 @@ class ECC_Curve ():
     def PubKey_Gen(self, k:int, verb: bool):
         '''Input: scalar k
            Output kG '''
-        Pubkey = self.curve.Point_Mult(k, self.curve.G_, 0)
+        Pubkey = self.curve.Point_Mult(k, self.G, 1)
         if (verb):
             log('d', f"given privkey = 0x%064x" %(k) )
             log('d', "Generated Pubkey:" )
@@ -59,16 +92,17 @@ class ECC_Curve ():
         
         return Pubkey
 
-    def Sig_Gen(self, priv_key, randk, sh256_dig, formt:str, verb: bool):
+    def NIST_Sig_Gen(self, priv_key, randk, sh256_dig, formt:str, verb: bool):
         ''' Elliptic Curve Digital Signature Algorithm (ECDSA)
         Input:  priv_key, randk, sha256_dig, pub_key format (comp|non-comp)
         Output: sig_r, sig_s, dig, pub_key_x, pub_key_y
         '''
-        assert not priv_key  > self.curve.n_ , "Provided private key > curve n!"
-        assert not randk > self.curve.n_ , "Provided randomk > curve n!"
-        #assert not sh256_dig <= self.curve.n_ , "Provided digest > curve n!"
-        if sh256_dig >= self.curve.n_ :
-            z = sh256_dig - self.curve.n_
+        assert self.family != "SM2", f"this config is NOT for NIST"
+        assert priv_key  < self.n , "Provided private key >= curve n!"
+        assert randk < self.n , "Provided randomk >= curve n!"
+        #assert not sh256_dig <= self.n , "Provided digest > curve n!"
+        if sh256_dig >= self.n :
+            z = sh256_dig - self.n
         else:
             z = sh256_dig
 
@@ -79,31 +113,117 @@ class ECC_Curve ():
         while not rx and not s:
             R  = self.PubKey_Gen(randk, verb)
             rx = R.x_
-            ry = R.y_
-            s = ((z + rx * priv_key) * modulo.modular_inverse(randk, self.curve.n_)) % self.curve.n_
+            #ry = R.y_
+            s = ((z + rx * priv_key) * modulo.modular_inverse(randk, self.n)) % self.n
 
         '''todo: low-x here rx is possibly > n? in such case do we need reduce rx by rx-n?'''
         '''todo: low-s here s is possibly > n/2?'''
         return (rx, s, z, pub_key.x_, pub_key.y_)
-    
-    def Signature_Verify(self, r, s, z, pub_x, pub_y):
-        s_inv = modulo.modular_inverse (s, self.curve.n_)
 
-        u1 = (z * s_inv) % self.curve.n_
-        u2 = (r * s_inv) % self.curve.n_
+    def SigBody_Validate(self, r, s, z, x, y):
+        assert r < self.n , "Provided sig.s >= curve n!"
+        assert s < self.n , "Provided sig.r >= curve n!"
+        assert z < self.n , "Provided sig.z >= curve n!"
+        assert x < self.p , "Provided pub.x >= curve p!"
+        assert y < self.p , "Provided pub.y >= curve p!"
 
-        u1G = self.curve.Point_Mult(u1, self.curve.G_, 0)
+    def NIST_Sig_Verify(self, r, s, z, pub_x, pub_y):
+        assert self.family != "SM2", f"this config is NOT for NIST"
+
+        self.SigBody_Validate(r, s, z, pub_x, pub_y)
+
+        s_inv = modulo.modular_inverse (s, self.n)
+
+        u1 = (z * s_inv) % self.n
+        u2 = (r * s_inv) % self.n
+
+        u1G = self.curve.Point_Mult(u1, self.G, 0)
         u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y)), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
 
-        ret = ( r  == (R.x_ % self.curve.n_) ) ## signature verify pass/fail
+        ret = ( r  == (R.x_ % self.n) ) ## signature verify pass/fail
         return ret
+    
+    def SM2_Sig_Gen(self, priv_key, randk, ZaM, formt:str, verb: bool):
+        ''' SM2 Spec, Part 2, 6.1 '''
+        assert self.family != "NIST", f"this config is NOT for SM2"
+
+        e = 0
+        if (ZaM >= self.n):
+            e = self.n
+        else: 
+            e = ZaM   
+        
+        r = 0
+        s = 0
+        da = priv_key
+
+        k_temp = rand.randint(1, self.n )
+        
+
+        Pub = self.curve.Point_Mult(da, self.G, 0)
+
+        del k_temp
+
+        while s == 0 :
+            while r == 0 :
+                if randk == 0:
+                    k = rand.randint(1, self.n )
+                else:
+                    k = randk
+
+                kG = self.curve.Point_Mult(k, self.G, 0)
+                r = (e + kG.x_) % self.n
+            #print("x1      : 0x%064x" %(x1) )
+            rda   = ( r * da ) % self.n
+            k_rda = ( k - rda) % self.n
+            da1_inv = modulo.modular_inverse(da+1, self.n)
+            s = ( da1_inv * k_rda ) % self.n
+
+        return (r, s, e, Pub.x_, Pub.y_) 
+
+    def SM2_Sig_Verify(self, r, s, e, p_x, p_y):
+        ''' SM2 Spec, Part 2, 6.2 '''
+        assert self.family != "NIST", f"this config is NOT for SM2"
+
+        self.SigBody_Validate(r, s, e, p_x, p_y)
+
+        P = ECP((p_x, p_y))
+
+        if not  self.curve.ECP_on_curve(P):
+            print ("provided pubkey is not on curve")
+            return False
+
+        t = (r + s) % self.n
+        
+        if t==0:
+            print ("r + s == 0")
+            return False
+
+
+        # e = ZaM
+        
+        sG = self.curve.Point_Mult(s, self.G, 0)
+        tP = self.curve.Point_Mult(t, P, 0)
+
+        R = self.curve.Point_Add_General (sG, tP)
+        rv = (e + R.x_) % self.n
+
+        if rv == r:
+            print("signature verify Pass")
+            return True
+        else:
+            print("signature verify Fail")
+            return False
+
+
 
     ###############################################
+
     def ECDH (self, self_priv_key, counter_part_PubKey: ECP):
         assert self.curve.ECP_on_curve(counter_part_PubKey) , "Provided Pubkey is not on curve!"
-        assert not self_priv_key  > self.curve.n_ , "Provided private key > curve n!"
+        assert not self_priv_key  > self.n , "Provided private key > curve n!"
 
         Q = self.curve.Point_Mult(self_priv_key, counter_part_PubKey, 0)
         return Q
@@ -112,7 +232,7 @@ class ECC_Curve ():
     ###############################################
 
 
-    def Encryption(self, Msg:str, Pub:ECP ):
+    def NIST_Encryption(self, Msg:str, Pub:ECP ):
         '''not yet done, TBD
         Elliptic Curve Integrated Encryption Scheme (ECIES)
         '''
@@ -122,26 +242,149 @@ class ECC_Curve ():
 
         Q = self.U
         while (Q == self.U):
-            d  = rand.randint(1, self.curve.n_ )            # priv key
-            Q  = self.curve.Point_Mult(d, self.curve.G_, 0) # pub  key
+            d  = rand.randint(1, self.n )            # priv key
+            Q  = self.curve.Point_Mult(d, self.G, 0) # pub  key
 
         R  = self.Unit
         while (R == self.U):
-            k = rand.randint(1, self.curve.n_ )
-            R = self.curve.Point_Mult(k, self.curve.G_, 0)
+            k = rand.randint(1, self.n )
+            R = self.curve.Point_Mult(k, self.G, 0)
         
 
         pass
 
-    def Decryption():
+    def NIST_Decryption():
         pass
+
+    def SM2_Encryption(self, M:str, Pb, k_in, verb= False):
+        '''SM2 spec., Part 4, 6.1'''
+        import support
+        import hash_lib as hash
+
+        if k_in == None:
+            k = rand.randint( 1, self.n )   # A1
+        else :
+            k = k_in
+
+        M_Byte = M.encode('utf-8')
+        
+        C1 = self.curve.Point_Mult(k, self.G)   #A2
+        C1_hex = C1.hex_str()
+        
+        Pub = Pb   #A3, h = 1
+        kPb = self.curve.Point_Mult(k, Pub)  #A4
+
+        x2 = kPb.hex_str('x', None)
+        y2 = kPb.hex_str('y', None)
+        Z_kdf  = kPb.hex_str('xy', None)
+        klen = len(M_Byte)*8
+
+        t  = support.SM2_KDF(Z_kdf, klen, 'sm3', 'bytes', 'bits')    #A5
+
+        C2 = M_Byte ^ t         #A6
+        C2_hex = C2.bytes.hex()
+
+        Z = x2 + M_Byte.hex() + y2 # (x2 ∥ M ∥ y2 )
+        Z_bytes = bytes.fromhex(Z)
+        C3_hex = '{:064x}'.format(hash.hash_256(Z_bytes, 'bytes', 'hex', 'sm3')) #A7
+        
+        C = C1_hex + C2_hex + C3_hex # C = C1 ∥ C2 ∥ C3     #A8
+
+        if verb:
+            log('d', f"Message (bit_length = {klen}) to be encrypted: {M}")
+            hex_show('Msg Hex: ', M_Byte.hex())
+            log('d', f"given k_rand = 0x%064x" %(k) )
+            log('d', "Generated Point C1:" )
+            C1.print_point('hex')
+            log('d', "Generated Point kPb:" )
+            kPb.print_point('hex')
+            # print(f"x2 ∥ M ∥ y2 hex byte = {Z_bytes}")
+            # hex_show(f"x2 ∥ M ∥ y2 hex byte = ", Z_bytes.hex())
+            hex_show(f"Z_kdf type {type(Z_kdf)}", Z_kdf)
+            hex_show(f"KDF: ", t.bytes.hex())
+            hex_show(f"C2 type {type(C2_hex)}: ", C2_hex)
+            hex_show(f"x2 ∥ M ∥ y2 hex = ", Z)
+            hex_show(f"C1", C1_hex)
+            hex_show(f"C2", C2_hex)
+            hex_show(f"C3", C3_hex)
+            hex_show(f"final C: ", C)
+
+        return C
+   
+    def SM2_Decryption(self, C:str, d: int, verb: bool = False ):
+        import support
+        from bitstring import Bits
+        import hash_lib as hash
+
+        key_byte_len = 256 // 8 # 32bytes
+        C_byte_len = len(C) // 2
+
+        assert C_byte_len >= (key_byte_len*3 + 1), f"Given C length = {C_byte_len}"
+        klen = (C_byte_len - 3*key_byte_len - 1)*8
+
+        C1_x = C[2 : 2*(key_byte_len)+2]
+        C1_y = C[2*key_byte_len+2 : 4*key_byte_len+2]
+
+        C1 = ECP ((int(C1_x,16), int(C1_y,16)))
+
+        if not self.curve.ECP_on_curve(C1):
+            assert False, f"recovered C1 point is not on curve"
+
+        S = C1 # h = 1
+
+        if S.is_Unit_Point():
+            assert False, f"recovered C1 point is Unit Point"
+        
+        dC1 = self.curve.Point_Mult(d, C1)
+
+        x2 = dC1.hex_str('x', None)
+        y2 = dC1.hex_str('y', None)
+        Z_kdf  = dC1.hex_str('xy', None)
+        
+        t  = support.SM2_KDF(Z_kdf, klen, 'sm3', 'bytes', 'bits')
+
+        C2 = C[4*key_byte_len+2 : 4*key_byte_len+2+klen//4]
+
+        M_ =  int(C2, 16) ^ int(t.hex, 16)
+        M_str = hex(M_)[2:]
+
+        Z = x2 + M_str + y2 # (x2 ∥ M ∥ y2 )
+        Z_bytes = bytes.fromhex(Z)
+        
+        u = '{:064x}'.format(hash.hash_256(Z_bytes, 'bytes', 'hex', 'sm3')) 
+
+        C3 = C[4*key_byte_len+2+klen//4:]
+
+        Decyption = (u == C3)
+
+        if verb or (not Decyption):
+            hex_show(f"input C, C byte_length: {C_byte_len} C bit_length:{C_byte_len*8}, Message bit_len (klen) = {klen}", C)
+            hex_show(f"C1, length = {len(C1_x)}", C1_x)
+            hex_show(f"C2, length = {len(C1_y)}", C1_y)
+            C1.print_point('hex')
+            log('d', "Generated Point dC1:" )
+            dC1.print_point('hex')
+            hex_show(f"t, type {type(t)} ", t.bytes.hex())
+            hex_show(f"C2, type {type(C2)} ", C2)
+            hex_show(f"M_ type {type(M_str)} ", M_str)
+            hex_show(f"u ", u)
+            hex_show(f"C3 ", C3)
+            log('d', f"Does u == C3 ? {u == C3}")
+
+        if Decyption:
+            M_byte_array = bytearray.fromhex(M_str)
+            M_ret = M_byte_array.decode()
+            return M_ret
+        else:
+            return None
+    
 
 ###########################################################
 def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
     ''' signature generate and verify test '''
     from hash_lib import hash_256 as sha256
     log_div('line', 1)
-    log('m', f"Signature generate+signature verify test, plan to run %d" %(test_round))
+    log('m', f"Signature generate+signature verify test, plan to run {test_round} rounds")
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -156,15 +399,19 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
         priv_key = rand.randint(1, curve_ins.n )
         randk    = rand.randint(1, curve_ins.n )
 
-        r,s,z,x,y = curve_ins.Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+        if curve_id == SM2_CV_ID or curve_id == SM2_TV_ID:
+            r,s,z,x,y = curve_ins.SM2_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+            if curve_ins.SM2_Sig_Verify(r,s,z,x,y):
+                test_pass+=1
+        else:
+            r,s,z,x,y = curve_ins.NIST_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+            if curve_ins.NIST_Sig_Verify(r,s,z,x,y):
+                test_pass+=1
 
         # pub_key  = curve_ins.PubKey_Gen(priv_key, verb=False)
         # P = (x,y)
         # if not pub_key.is_equal(ECP(P)):
         #     log('w', "Pubkey is different!")
-
-        if curve_ins.Signature_Verify(r,s,z,x,y):
-            test_pass+=1
         
         i+=1
     
@@ -176,7 +423,7 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
 
 def ECDH_unit_test(curve_id, test_round):
     ''' ECDH test '''
-    log('m', f"ECDH test, plan to run %d" %(test_round))
+    log('m', f"ECDH test, plan to run {test_round} rounds")
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -212,6 +459,7 @@ def ECDH_unit_test(curve_id, test_round):
 ## ECC unit test
 ## this website can generate test vector and comapre with our result
 ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
 format_list = ['dec', 'hex']
 def ECC_unit_test (curve_id:int, format = 'dec'):
     '''unit test for Point_Add Point_Double
@@ -295,8 +543,8 @@ def Curve_unit_test (curve_id):
 
 def Point_Addition_HE_test (curve_id, test_round):
     '''Point Add homomorphic encryption test '''
-    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
-    log('m', f"Point Add homomorphic encryption test, plan to run %d" %(test_round))
+    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id = {curve_id} is not supported!")
+    log('m', f"Point Add homomorphic encryption test, plan to run {test_round} rounds")
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
@@ -333,15 +581,89 @@ def Point_Addition_HE_test (curve_id, test_round):
 
     return test_pass
    
-   
+def show_signature(msg, r, s, z, Qx, Qy):
+    print(msg)
+    print("r    :  0x%064x" %(r) )
+    print("s    :  0x%064x" %(s) )
+    print("hash :  0x%064x" %(z) )
+    print("Qx   :  0x%064x" %(Qx) )
+    print("Qy   :  0x%064x" %(Qy) )
+    print("")
+
+def SM2_TV_Test():
+    p = 0x5EF55F07DD5D65CD231C4842324694399E4DADC57F15A21E98CC8BC272C7AE13
+    k = 0xB8BAAFCAA92BA3FDAC766683FB7950CEFE0E4A2B4461CA52C1D218E4937EB3D5
+    z = 0x5F77158730334C649ACB4013E81E237085DC63EFBAC7A05011F7109FA69C8993
+
+    curve_ins = ECC_Curve(123)
+    r,s,z,x,y = curve_ins.SM2_Sig_Gen(p, k, z, 'non-compress', False )
+    # P = curve_ins.curve.Point_Mult(p, curve_ins.G, 0)
+
+    # show_signature("",r,s,z,P.x_,P.y_)
+    
+    # curve_ins.SM2_Sig_Verify(r,s,z,P.x_,P.y_)
+    curve_ins.SM2_Sig_Verify(r,s,z,x,y)
+
+
+def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , verb: bool = False):
+    
+    cuv = ECC_Curve(cid)
+    if cid == SM2_TV_ID:
+        priv = 0x1649AB77A00637BD5E2EFE283FBF353534AA7F7CB89463F208DDBC2920BB0DA0
+        k    = 0x4C62EEFD6ECFC2B95B92FD6C3D9575148AFA17425546D49018E5388D49DD7B4F
+        log('i', "this is SM2 encryption+Decryption test by using SM2 test vector-->")
+        M = 'encryption standard'
+        Pb = cuv.PubKey_Gen(priv, verb)
+        C  = cuv.SM2_Encryption(M, Pb, k, verb)
+        if verb:
+            log_div("double",1)
+        M_ = cuv.SM2_Decryption(C, priv, verb)
+        if verb:
+            log_div("double",1)
+        
+        log('i', f"Input plain text for encryption: {M}")
+        log('i', f"Encrypted result: {C}")
+        log('i', f"Decrypted plain text: {M_}")
+
+        if M == M_:
+            log('m', "test passed!")
+        else:
+            log('e', "test failed!")
+
+    elif cid == SM2_CV_ID:
+        log('i', f"this is SM2 encryption+Decryption general test, will run {test_rounds} rounds")
+        test_pass = 0
+        sm2_n = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
+        for i in range(test_rounds):
+
+            m_rnd = rand.randint( 1, pow(2,512) )
+            M = hex(m_rnd)[2:]
+            #log('i', f"Randomly gen message (byte) length = {len(M)}")
+            priv  = rand.randint( 1, sm2_n )
+
+            Pb = cuv.PubKey_Gen(priv, verb)
+            C  = cuv.SM2_Encryption(M, Pb, None, verb)
+            #log_div("double",1)
+            M_ = cuv.SM2_Decryption(C, priv, verb)
+            if M == M_:
+                test_pass = test_pass + 1
+                log('m', f"test round {i+1}/{test_rounds} passed!")
+            else:
+                log('e', f"test round {i+1}/{test_rounds} failed!")
+
+        log('m', f"total run {test_rounds}, pass {test_pass} rounds")
+
+
+    
 
 ################################################
 ## main ##
 if __name__ == '__main__':
-    iter = 100
+    iter = 10
     log('m', "For check deatil, enable LOG_I/LOG_D option in config.py, and compare the result with online tools : http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html")
     import timeit
-    
+
+ 
     for cid in CURVE_LIST:
         # ecc library test
         ECC_unit_test(cid)
@@ -371,4 +693,7 @@ if __name__ == '__main__':
         duration = timeit.default_timer() - begin
         log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
         log_div('double', 1)
-   
+
+        #SM2_EN_DE_Test(SM2_TV_ID)       # test by using test vector from SM2 spec.
+        SM2_EN_DE_Test(SM2_CV_ID, iter, False)   # test by using random gen test vectors
+
