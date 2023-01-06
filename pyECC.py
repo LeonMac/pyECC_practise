@@ -159,7 +159,7 @@ class ECC_Curve ():
         s = 0
         da = priv_key
 
-        k_temp = rand.randint(1, self.n )
+        k_temp = rand.randint(1, self.n-1 )
         
 
         Pub = self.curve.Point_Mult(da, self.G, 0)
@@ -169,7 +169,7 @@ class ECC_Curve ():
         while s == 0 :
             while r == 0 :
                 if randk == 0:
-                    k = rand.randint(1, self.n )
+                    k = rand.randint(1, self.n-1 )
                 else:
                     k = randk
 
@@ -242,12 +242,12 @@ class ECC_Curve ():
 
         Q = self.U
         while (Q == self.U):
-            d  = rand.randint(1, self.n )            # priv key
+            d  = rand.randint(1, self.n-1 )            # priv key
             Q  = self.curve.Point_Mult(d, self.G, 0) # pub  key
 
         R  = self.Unit
         while (R == self.U):
-            k = rand.randint(1, self.n )
+            k = rand.randint(1, self.n-1 )
             R = self.curve.Point_Mult(k, self.G, 0)
         
 
@@ -262,7 +262,7 @@ class ECC_Curve ():
         import hash_lib as hash
 
         if k_in == None:
-            k = rand.randint( 1, self.n )   # A1
+            k = rand.randint( 1, self.n-1 )   # A1
         else :
             k = k_in
 
@@ -393,11 +393,11 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
     # dig = sha256(msg)
 
     while i < test_round: 
-        msg = str(rand.randint(1, curve_ins.n ))
+        msg = str(rand.randint(1, curve_ins.n-1 ))
         dig = sha256(msg)
 
-        priv_key = rand.randint(1, curve_ins.n )
-        randk    = rand.randint(1, curve_ins.n )
+        priv_key = rand.randint(1, curve_ins.n-1 )
+        randk    = rand.randint(1, curve_ins.n-1 )
 
         if curve_id == SM2_CV_ID or curve_id == SM2_TV_ID:
             r,s,z,x,y = curve_ins.SM2_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
@@ -430,11 +430,11 @@ def ECDH_unit_test(curve_id, test_round):
     test_pass = 0
     while i < test_round:
         # Alice private key and Pubkey
-        da = rand.randint(1, curve_ins.n )
+        da = rand.randint(1, curve_ins.n-1 )
         Pa = curve_ins.PubKey_Gen(da, False)
 
         # Bob private key and Pubkey
-        db = rand.randint(1, curve_ins.n )
+        db = rand.randint(1, curve_ins.n-1 )
         Pb = curve_ins.PubKey_Gen(db, False)
 
         # Alice Pubkey sent to Bob, Bob calculate Share secret
@@ -517,7 +517,7 @@ def ECC_unit_test (curve_id:int, format = 'dec'):
     kG.print_point(format)
     log_div('line',1)
 
-    k = rand.randint(1, curve_ins.n )
+    k = rand.randint(1, curve_ins.n-1 )
     log('m', "Point Mult unit test 2: kG, k random ")
     log('d', f"k = 0x%064x" %(k) )
     log('d', f"k = 0d%d" %(k) )
@@ -534,7 +534,7 @@ def Curve_unit_test (curve_id):
     assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
     curve_ins = ECC_Curve(curve_id)
 
-    k = rand.randint(1, curve_ins.n )
+    k = rand.randint(1, curve_ins.n-1 )
     log('m', "Pubkey gen unit test:")
     log('d', "PrivKey = 0d%d" %(k) )
     Pubkey = curve_ins.PubKey_Gen(k, True)
@@ -551,7 +551,7 @@ def Point_Addition_HE_test (curve_id, test_round):
     test_pass = 0
     while i < test_round:  
 
-        k1 = rand.randint(curve_ins.n -10, curve_ins.n )
+        k1 = rand.randint(curve_ins.n -10, curve_ins.n)
         #k1 = i+1
         #print ("k1 = 0d%d" %(k1) )
         k1G = curve_ins.PubKey_Gen(k1, False)
@@ -639,7 +639,7 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , verb: bool = False):
             m_rnd = rand.randint( 1, pow(2,512) )
             M = hex(m_rnd)[2:]
             #log('i', f"Randomly gen message (byte) length = {len(M)}")
-            priv  = rand.randint( 1, sm2_n )
+            priv  = rand.randint( 1, sm2_n-1 )
 
             Pb = cuv.PubKey_Gen(priv, verb)
             C  = cuv.SM2_Encryption(M, Pb, None, verb)

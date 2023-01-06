@@ -16,7 +16,7 @@ An ECC crypto library based upon python native library.
 - EDCH (NIST and SM)
 - Message encryption/decryption (SM so far)
 
-## How to run demo
+## How to run demo tests
 ```shell
 cd path_of_project
 python pyECC.py

@@ -185,7 +185,7 @@ class ECC:
         R = Rneg.neg_point(self.p_)
         return R
         
-    def Point_Mult(self, k, Pin: ECP, method = 1):
+    def Point_Mult(self, k:int, Pin: ECP, method = 1):
         ''' Point multiply by scalar k'''
         assert not k < 0 , "Provided k < 0 !"
         assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"
