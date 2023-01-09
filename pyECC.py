@@ -256,8 +256,9 @@ class ECC_Curve ():
     def NIST_Decryption():
         pass
 
-    def SM2_Encryption(self, M:str, Pb, k_in, verb= False):
+    def SM2_Encryption(self, M:str, Pb, k_in, ver: str ='c1c3c2', verb: bool = False):
         '''SM2 spec., Part 4, 6.1'''
+        assert ver in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{ver}"
         import support
         import hash_lib as hash
 
@@ -288,7 +289,10 @@ class ECC_Curve ():
         Z_bytes = bytes.fromhex(Z)
         C3_hex = '{:064x}'.format(hash.hash_256(Z_bytes, 'bytes', 'hex', 'sm3')) #A7
         
-        C = C1_hex + C2_hex + C3_hex # C = C1 ∥ C2 ∥ C3     #A8
+        if ver == 'c1c2c3':
+            C = C1_hex + C2_hex + C3_hex # C = C1 ∥ C2 ∥ C3     #A8
+        else:
+            C = C1_hex + C3_hex + C2_hex # C = C1 ∥ C3 ∥ C2     #A8
 
         if verb:
             log('d', f"Message (bit_length = {klen}) to be encrypted: {M}")
@@ -307,11 +311,12 @@ class ECC_Curve ():
             hex_show(f"C1", C1_hex)
             hex_show(f"C2", C2_hex)
             hex_show(f"C3", C3_hex)
-            hex_show(f"final C: ", C)
+            hex_show(f"[Encryption][format: {ver}] final C: ", C)
 
         return C
    
-    def SM2_Decryption(self, C:str, d: int, verb: bool = False ):
+    def SM2_Decryption(self, C:str, d: int, ver: str ='c1c3c2', verb: bool = False):
+        assert ver in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{ver}"
         import support
         from bitstring import Bits
         import hash_lib as hash
@@ -342,8 +347,12 @@ class ECC_Curve ():
         Z_kdf  = dC1.hex_str('xy', None)
         
         t  = support.SM2_KDF(Z_kdf, klen, 'sm3', 'bytes', 'bits')
-
-        C2 = C[4*key_byte_len+2 : 4*key_byte_len+2+klen//4]
+        if ver == 'c1c2c3':
+            C2 = C[4*key_byte_len+2 : 4*key_byte_len+2+klen//4]
+            C3 = C[4*key_byte_len+2 + klen//4:]
+        else:
+            C3 = C[4*key_byte_len+2 : 4*key_byte_len+2+64]  # sm3 hash fixed 256bit/4 = 64 hex
+            C2 = C[4*key_byte_len+2+64 :]
 
         M_ =  int(C2, 16) ^ int(t.hex, 16)
         M_str = hex(M_)[2:]
@@ -353,12 +362,14 @@ class ECC_Curve ():
         
         u = '{:064x}'.format(hash.hash_256(Z_bytes, 'bytes', 'hex', 'sm3')) 
 
-        C3 = C[4*key_byte_len+2+klen//4:]
 
         Decyption = (u == C3)
 
         if verb or (not Decyption):
-            hex_show(f"input C, C byte_length: {C_byte_len} C bit_length:{C_byte_len*8}, Message bit_len (klen) = {klen}", C)
+            hex_show(f"[Decryption][format:{ver}] input C, C byte_length: {C_byte_len} C bit_length:{C_byte_len*8}, Message bit_len (klen) = {klen}", C)
+            hex_show(f"C1", C1_x+C1_y)
+            hex_show(f"C2", C2)
+            hex_show(f"C3", C3)
             hex_show(f"C1, length = {len(C1_x)}", C1_x)
             hex_show(f"C2, length = {len(C1_y)}", C1_y)
             C1.print_point('hex')
@@ -368,7 +379,7 @@ class ECC_Curve ():
             hex_show(f"C2, type {type(C2)} ", C2)
             hex_show(f"M_ type {type(M_str)} ", M_str)
             hex_show(f"u ", u)
-            hex_show(f"C3 ", C3)
+
             log('d', f"Does u == C3 ? {u == C3}")
 
         if Decyption:
@@ -605,21 +616,22 @@ def SM2_TV_Test():
     curve_ins.SM2_Sig_Verify(r,s,z,x,y)
 
 
-def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , verb: bool = False):
+def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = False):
     
     cuv = ECC_Curve(cid)
     if cid == SM2_TV_ID:
         priv = 0x1649AB77A00637BD5E2EFE283FBF353534AA7F7CB89463F208DDBC2920BB0DA0
         k    = 0x4C62EEFD6ECFC2B95B92FD6C3D9575148AFA17425546D49018E5388D49DD7B4F
-        log('i', "this is SM2 encryption+Decryption test by using SM2 test vector-->")
+        log('i', f"this is SM2 encryption+Decryption test by using SM2 test vector, format '{ver}': ")
         M = 'encryption standard'
         Pb = cuv.PubKey_Gen(priv, verb)
-        C  = cuv.SM2_Encryption(M, Pb, k, verb)
-        if verb:
-            log_div("double",1)
-        M_ = cuv.SM2_Decryption(C, priv, verb)
-        if verb:
-            log_div("double",1)
+        C  = cuv.SM2_Encryption(M, Pb, k, ver, verb)
+
+        if verb: log_div("double",1)
+
+        M_ = cuv.SM2_Decryption(C, priv, ver, verb)
+
+        if verb: log_div("double",1)
         
         log('i', f"Input plain text for encryption: {M}")
         log('i', f"Encrypted result: {C}")
@@ -631,9 +643,9 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , verb: bool = False):
             log('e', "test failed!")
 
     elif cid == SM2_CV_ID:
-        log('i', f"this is SM2 encryption+Decryption general test, will run {test_rounds} rounds")
         test_pass = 0
         sm2_n = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
+        log('i', f"this is SM2 Encryption+Decryption general test, will run {test_rounds} rounds, format '{ver}': ")
         for i in range(test_rounds):
 
             m_rnd = rand.randint( 1, pow(2,512) )
@@ -642,9 +654,9 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , verb: bool = False):
             priv  = rand.randint( 1, sm2_n )
 
             Pb = cuv.PubKey_Gen(priv, verb)
-            C  = cuv.SM2_Encryption(M, Pb, None, verb)
+            C  = cuv.SM2_Encryption(M, Pb, None, ver, verb)
             #log_div("double",1)
-            M_ = cuv.SM2_Decryption(C, priv, verb)
+            M_ = cuv.SM2_Decryption(C, priv, ver, verb)
             if M == M_:
                 test_pass = test_pass + 1
                 log('m', f"test round {i+1}/{test_rounds} passed!")
@@ -695,5 +707,7 @@ if __name__ == '__main__':
         log_div('double', 1)
 
         #SM2_EN_DE_Test(SM2_TV_ID)       # test by using test vector from SM2 spec.
-        SM2_EN_DE_Test(SM2_CV_ID, iter, False)   # test by using random gen test vectors
+        SM2_EN_DE_Test(SM2_CV_ID, iter, 'c1c2c3', False)   # test by using random gen test vectors
+        log_div('double', 1)
+        SM2_EN_DE_Test(SM2_CV_ID, iter, 'c1c3c2', False)   # test by using random gen test vectors
 
