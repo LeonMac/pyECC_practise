@@ -41,7 +41,7 @@ class ECP:
         ret = (self.x_, mod - self.y_)
         return ECP(ret)
 
-    def print_point(self, format):
+    def print_point(self, format:str = 'hex'):
         if format == 'hex':
             log('d', f"Point.x(affine): {hex( self.x_ )}" )
             log('d', f"Point.y(affine): {hex( self.y_ )}" )
