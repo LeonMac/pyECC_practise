@@ -18,8 +18,8 @@ class ECP:
         self.x_ = P[0]
         self.y_ = P[1]
 
-        if self.is_Unit_Point():
-            log('w', "This is the UNIT Point!")
+        # if self.is_Unit_Point():
+        #     log('i', "This is the UNIT Point!")
 
         self.y_even = (self.y_ & 0b1) # ry odd (1) even (0)
 
