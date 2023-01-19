@@ -7,6 +7,8 @@ from ecc import ECP
 from random import SystemRandom
 rand = SystemRandom()
 
+import hash_lib as hash
+
 
 class zkp_tool():
     def __init__(self, cid:int, interaction: int = 1):
@@ -45,8 +47,6 @@ def ZKP_DLwCF(cid:int, round:int, prover_honest:bool = True ):
     tool = zkp_tool(cid)
     x, B = tool.Mul_Point(None)  # B is known by both Prover and Verifier, x is secrete
 
-    # verifer_check_pass = 0
-    # verifer_check_fail = 0
     dishonest_count = 0
 
     for rnd in range (round):
@@ -83,7 +83,64 @@ def ZKP_DLwCF(cid:int, round:int, prover_honest:bool = True ):
     return dishonest_count
 
 
+def ZKP_DLwCF_test(cid, round):
+    print(f"Prover Honest test--> {round} rounds: ")
+    ZKP_DLwCF(cid, round, True)
+    print(f"Prover DisHonest test--> {round} rounds: ")
+    ZKP_DLwCF(cid, round, False)
+
+#####################################################################
+
+def ZKP_Schnorr(cid:int, prover_honest:bool = True ):
+    tool = zkp_tool(cid)
+    G =   tool.G   
+    x, B = tool.Mul_Point(None)  # B is known by both Prover and Verifier, x is secrete
+
+    OK = False
+
+    if prover_honest:
+        r,A = tool.Mul_Point(None)  # Prover generates random r point A = r.G , A is sent to Verifier
+        M_hex = G.hex_str('xy', None) + B.hex_str('xy', None) + A.hex_str('xy', None)
+        c = hash.hash_256(M_hex, 'str', 'hex', 'sm3') #Verifier computes random c = HASH(G, B, A) and sends c to Prover 
+        m = (r + c * x) % tool.cuv.n # Prover computes m = r + c · x(mod n) and sends m to Verifier 
+
+    else:                           # if Prover is dis-honest, means he/she does not know x
+        r,A = tool.Mul_Point(None)  # Prover generates random r point A = r.G , A is sent to Verifier
+        M_hex = G.hex_str('xy', None) + B.hex_str('xy', None) + A.hex_str('xy', None)
+        c = hash.hash_256(M_hex, 'str', 'hex', 'sm3') #Verifier computes random c = HASH(G, B, A) and sends c to Prover 
+        # prover does not know x, have to generate a random x
+        x = rand.randint( 1, tool.cuv.n-1 )
+        m = (r + c * x) % tool.cuv.n # 
+
+    _, mG  = tool.Mul_Point(m, tool.G) # Verifier checks that P = m · G − c · B = (r + c · x)· G − c · B = r · G + c · x · G − c · x · G = r · G = A
+    _, cB  = tool.Mul_Point(c, B)
+    P = tool.Add_Point(mG, cB.neg_point(tool.p))
+
+    if P.is_equal(A):
+        OK = True
+
+    return OK
+                                    
+
+def ZKP_Schnorr_test(cid, round):
+    honest = 0
+
+    for i in range(round):
+        if ZKP_Schnorr(cid, True):
+            honest += 1
+    print(f"Prover Honest test--> {round} rounds: honest count = {honest}")
+
+    honest = 0
+    for i in range(round):
+        if ZKP_Schnorr(cid, False):
+            honest += 1
+
+    print(f"Prover DisHonest test--> {round} rounds: honest count = {honest}")
+
 if __name__ == '__main__':
     cid = int(ECC.SECP256K1)
+    ZKP_DLwCF_test(cid, 10)
+    ZKP_Schnorr_test(cid, 10)
 
-    ZKP_DLwCF(cid, 10, False)
+
+
