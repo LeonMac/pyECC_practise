@@ -1,3 +1,9 @@
+# https://crypto.stanford.edu/pbc/notes/ep/
+# Generating Random Points
+
+# https://cr.yp.to/antiforgery.html#sqroot
+
+#################################################
 # for some history debug code
 # def SM2_encryption():
     # 待加密的消息M ：encryption standard
