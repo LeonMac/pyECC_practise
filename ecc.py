@@ -12,8 +12,8 @@ class ECP:
     ''' EC point class, affine coordinate'''
     def __init__(self, P):
         '''P must be tuple of (x, y)'''
-        assert (P[0] >= 0 ), "ECP.x must be >0"
-        assert (P[1] >= 0 ), "ECP.y must be >0"
+        assert (P[0] >= 0 ), "ECP.x must be >=0"
+        assert (P[1] >= 0 ), "ECP.y must be >=0"
 
         self.x_ = P[0]
         self.y_ = P[1]
