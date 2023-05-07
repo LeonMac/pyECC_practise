@@ -5,71 +5,8 @@ rand = SystemRandom()   # cryptographic random byte generator
 
 import modulo
 from log import log
+from ecp import ECP,JCB_ECP
 
-###################################################
-## ECP = EC Point
-class ECP:
-    ''' EC point class, affine coordinate'''
-    def __init__(self, P):
-        '''P must be tuple of (x, y)'''
-        assert (P[0] >= 0 ), "ECP.x must be >=0"
-        assert (P[1] >= 0 ), "ECP.y must be >=0"
-
-        self.x_ = P[0]
-        self.y_ = P[1]
-
-        # if self.is_Unit_Point():
-        #     log('i', "This is the UNIT Point!")
-
-        self.y_even = (self.y_ & 0b1) # ry odd (1) even (0)
-
-    def is_Unit_Point(self):
-        if self.x_ == 0 and self.y_ == 0:
-            return True
-        else:
-            return False
-
-    def is_reverse(self, P, p):
-        if (self.x_ ==P.x_) and (self.y_ == p - P.y_):
-            return True
-
-    def is_equal(self, P):
-        if (self.x_ == P.x_) and (self.y_ == P.y_):
-            return True
-    
-    def neg_point(self, mod):
-        ret = (self.x_, mod - self.y_)
-        return ECP(ret)
-
-    def print_point(self, format:str = 'hex'):
-        if format == 'hex':
-            log('d', f"Point.x(affine): {hex( self.x_ )}" )
-            log('d', f"Point.y(affine): {hex( self.y_ )}" )
-        elif format == 'dec':
-            log('d', f"Point.x(affine): {self.x_ }") 
-            log('d', f"Point.y(affine): {self.y_ }")
-    
-    def hex_str(self, format='xy', compress = False):
-        if   format == 'xy':
-            ret = "{:064x}".format(self.x_) + "{:064x}".format(self.y_)
-        elif format == 'x':
-            ret = "{:064x}".format(self.x_)
-        elif format == 'y':
-            ret = "{:064x}".format(self.y_)
-
-        if compress:
-            if self.y_even:
-                PC = '03'
-            else:
-                PC = '02'
-        elif compress == False:
-            PC = '04'
-        elif compress == None:
-            PC = ''
-        
-        return PC + ret
-
-# define Global constant UNIT Point by using (0,0)
 UNIT = ECP ( (0,0) )
 
 # ECC = EC Curve
@@ -92,7 +29,7 @@ class ECC:
         
         log('i', f"EC Curve: {self.name} init done" )
 
-    def ECP_on_curve(self, P: ECP):
+    def ECP_on_curve(self, P: ECP) -> bool:
         left  = (P.y_** 2) % self.p_
         right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
         on_curve = (left == right)
@@ -102,7 +39,7 @@ class ECC:
 
         return on_curve
     
-    def Point_Dbl (self, P: ECP):
+    def Point_Dbl (self, P: ECP) -> ECP:
         '''calculate R = P + P = 2P'''
         x = P.x_
         y = P.y_
@@ -120,7 +57,7 @@ class ECC:
         R = Rneg.neg_point(self.p_)
         return R
 
-    def Point_Add (self, P: ECP, Q: ECP):
+    def Point_Add (self, P: ECP, Q: ECP) -> ECP:
         '''calculate R = P + Q, when P != Q '''
         if Q.is_Unit_Point():
             return P
@@ -147,7 +84,7 @@ class ECC:
         R = Rneg.neg_point(self.p_)
         return R
 
-    def Point_Add_General (self, P: ECP, Q: ECP):
+    def Point_Add_General (self, P: ECP, Q: ECP) -> ECP:
         '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
         if Q.is_Unit_Point():
             return P
@@ -185,7 +122,7 @@ class ECC:
         R = Rneg.neg_point(self.p_)
         return R
         
-    def Point_Mult(self, k:int, Pin: ECP, method = 1):
+    def Point_Mult(self, k:int, Pin: ECP, method = 1) -> ECP:
         ''' Point multiply by scalar k'''
         assert not k < 0 , "Provided k < 0 !"
         assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"
