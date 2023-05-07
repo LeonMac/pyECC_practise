@@ -11,7 +11,7 @@ from log import print_divider as log_div
 
 import modulo
 
-from ecc import ECC, UNIT
+from ecc import ECC
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
@@ -84,9 +84,9 @@ class ECC_Curve ():
             assert False, f"Un-support curve id {curve_id}!"
 
         self.G  = ECP( (self.Gx, self.Gy) )
-        self.U  = UNIT
 
         self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name)
+        # self.U  = self.curve.UNIT
     
     def PubKey_Gen(self, k:int, verb: bool):
         '''Input: scalar k
@@ -247,13 +247,13 @@ class ECC_Curve ():
 
         M = bytes(Msg, encoding="utf-8")
 
-        Q = self.U
-        while (Q == self.U):
+        Q = self.curve.UINT
+        while (Q == self.curve.UINT):
             d  = rand.randint(1, self.n-1 )            # priv key
             Q  = self.curve.Point_Mult(d, self.G, 0) # pub  key
 
-        R  = self.Unit
-        while (R == self.U):
+        R  = self.curve.UINT
+        while (R == self.curve.UINT):
             k = rand.randint(1, self.n-1 )
             R = self.curve.Point_Mult(k, self.G, 0)
         
@@ -514,7 +514,7 @@ def ECC_unit_test (curve_id:int, format = 'dec'):
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
     tG.print_point(format)
     log('m', "Point Add General unit test 2: tG = tG + Uint")
-    tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.U)
+    tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.curve.UNIT)
     tG_plus_I.print_point(format)
     log('m', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point(curve_ins.p)

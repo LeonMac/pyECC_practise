@@ -5,11 +5,9 @@ rand = SystemRandom()   # cryptographic random byte generator
 
 import modulo
 from log import log
-from ecp import ECP,JCB_ECP
+from ecp import ECP, JCB_ECP
 
-UNIT = ECP ( (0,0) )
 
-# ECC = EC Curve
 class ECC:
     '''EC curve class'''
     def __init__(self, a, b, n, p, G:ECP, curve_id, name):
@@ -26,6 +24,8 @@ class ECC:
         assert ((4* self.a_**3 + 27* self.b_**2) != 0), "Provided a and b not fit EC curve definition! "
 
         assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
+
+        self.UNIT = ECP ( (0,0) )
         
         log('i', f"EC Curve: {self.name} init done" )
 
@@ -64,7 +64,7 @@ class ECC:
         if P.is_Unit_Point():
             return Q
         if Q.is_reverse(P, self.p_):
-            return UNIT
+            return self.UNIT
 
         # slope m
         m = ( P.y_ - Q.y_  ) % self.p_
@@ -91,7 +91,7 @@ class ECC:
         if P.is_Unit_Point():
             return Q
         if Q.is_reverse(P, self.p_):
-            return UNIT
+            return self.UNIT
         
         if P.is_equal(Q):
         # slope m for Dbl
@@ -128,10 +128,10 @@ class ECC:
         assert self.ECP_on_curve(Pin) , "Provided Pin is not on curve!"
 
         if (k % self.n_) == 0 or Pin.is_Unit_Point():
-            return UNIT
+            return self.UNIT
 
         i = k
-        R = UNIT
+        R = self.UNIT
         P = Pin
         if method == 0:
             while i:
