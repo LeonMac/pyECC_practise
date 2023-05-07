@@ -16,16 +16,18 @@ from ecc import ECC
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
-SM2_TV_ID = 124 # 
+SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 
-USE_JCB = True
+from config import USE_JCB
 
 if USE_JCB:
-    from ecp import JCB_ECP as ECP
-    print(f"Flag USE_JCB ={USE_JCB}, use Jacobian coordinate!")
+    from ecp import ECP_JCB as ECP
+    # print(f"Flag USE_JCB ={USE_JCB}, use Jacobian coordinate!")
+    log_method = 'jacobian'
 else:
-    from ecp import ECP as ECP
-    print(f"Flag USE_JCB ={USE_JCB}, use Affine coordinate!")
+    from ecp import ECP_AFF as ECP
+    # print(f"Flag USE_JCB ={USE_JCB}, use Affine coordinate!")
+    log_method = 'affine'
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
@@ -100,7 +102,7 @@ class ECC_Curve ():
         if (verb):
             log('d', f"given privkey = 0x%064x" %(k) )
             log('d', "Generated Pubkey:" )
-            Pubkey.print_point('hex')
+            Pubkey.print_point(log_method)
         
         return Pubkey
 
@@ -311,9 +313,9 @@ class ECC_Curve ():
             hex_show('Msg Hex: ', M_Byte.hex())
             log('d', f"given k_rand = 0x%064x" %(k) )
             log('d', "Generated Point C1:" )
-            C1.print_point('hex')
+            C1.print_point(log_method)
             log('d', "Generated Point kPb:" )
-            kPb.print_point('hex')
+            kPb.print_point(log_method)
             # print(f"x2 ∥ M ∥ y2 hex byte = {Z_bytes}")
             # hex_show(f"x2 ∥ M ∥ y2 hex byte = ", Z_bytes.hex())
             hex_show(f"Z_kdf type {type(Z_kdf)}", Z_kdf)
@@ -384,9 +386,9 @@ class ECC_Curve ():
             hex_show(f"C3", C3)
             hex_show(f"C1, length = {len(C1_x)}", C1_x)
             hex_show(f"C2, length = {len(C1_y)}", C1_y)
-            C1.print_point('hex')
+            C1.print_point(log_method)
             log('d', "Generated Point dC1:" )
-            dC1.print_point('hex')
+            dC1.print_point(log_method)
             hex_show(f"t, type {type(t)} ", t.bytes.hex())
             hex_show(f"C2, type {type(C2)} ", C2)
             hex_show(f"M_ type {type(M_str)} ", M_str)
@@ -483,13 +485,12 @@ def ECDH_unit_test(curve_id, test_round):
 ## this website can generate test vector and comapre with our result
 ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
 CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
-format_list = ['dec', 'hex']
-def ECC_unit_test (curve_id:int, format = 'dec'):
+
+def ECC_unit_test (curve_id:int, format = log_method):
     '''unit test for Point_Add Point_Double
        result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
     '''
     assert curve_id in CURVE_LIST, log('e', f"priovided curve_id ={curve_id} is not supported!")
-    assert format in format_list,  log('e', f"priovided format ={format} is not supported!")
     
     curve_ins = ECC_Curve(curve_id)
     #unit test: Point Double
@@ -506,7 +507,7 @@ def ECC_unit_test (curve_id:int, format = 'dec'):
 
     #unit test: Point Add:
     log('m',"Point Add unit test: Unit(0,0) = tG+tGn")
-    tGn = tG.neg_point(curve_ins.p)
+    tGn = tG.neg_point()
     U = curve_ins.curve.Point_Add(tG, tGn)
     U.print_point(format)
     log_div('line',1)
@@ -522,7 +523,7 @@ def ECC_unit_test (curve_id:int, format = 'dec'):
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.curve.UNIT)
     tG_plus_I.print_point(format)
     log('m', "Point Add General unit test 3: Unit = tG + tGn")
-    tGn = tG.neg_point(curve_ins.p)
+    tGn = tG.neg_point()
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
     tG_plus_tGn.print_point(format)
     log_div('line',1)
@@ -595,8 +596,8 @@ def Point_Addition_HE_test (curve_id, test_round):
             test_pass +=1
         else:
             log('e', f"Test round %d of %d fail" %(i, test_round))
-            kG_0.print_point('hex')
-            kG_1.print_point('hex')
+            kG_0.print_point(log_method)
+            kG_1.print_point(log_method)
 
         i+=1
     log('m', f"Total test round %d, %d pass" %(test_round, test_pass))

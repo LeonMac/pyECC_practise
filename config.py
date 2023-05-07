@@ -14,3 +14,4 @@ def py_version_good():
     ver = sys.version_info
     return (ver[0] == 3 and ver[1] > 6)
 
+USE_JCB = True  # gobal config for jacobian or affine

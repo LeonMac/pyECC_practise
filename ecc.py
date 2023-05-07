@@ -5,7 +5,17 @@ rand = SystemRandom()   # cryptographic random byte generator
 
 import modulo
 from log import log
-from ecp import ECP, JCB_ECP
+
+from config import USE_JCB
+
+if USE_JCB:
+    from ecp import ECP_JCB as ECP
+    INIT_MSG = "Jacobian Coordinate"
+    # print(f"Flag USE_JCB ={USE_JCB}, use Jacobian coordinate!")
+else:
+    from ecp import ECP_AFF as ECP
+    # print(f"Flag USE_JCB ={USE_JCB}, use Affine coordinate!")
+    INIT_MSG = "Jacobian Coordinate"
 
 
 class ECC:
@@ -38,7 +48,7 @@ class ECC:
         else:
             self.UNIT = ECP ( (0,0), self.p_ )
         
-        log('i', f"EC Curve: {self.name} init done" )
+        log('i', f"EC Curve: {self.name} init done, we use {INIT_MSG}" )
 
     def ECP_on_curve(self, P: ECP) -> bool:
         if self.jcb:
@@ -69,21 +79,40 @@ class ECC:
     
     def Point_Dbl (self, P: ECP) -> ECP:
         '''calculate R = P + P = 2P'''
-        x = P.x_
-        y = P.y_
+        if P.is_Unit_Point():
+            return P # doubling the UNIT
+        
+        if self.jcb:    # Jacobian vesion
+            Y2 = (P.Y*P.Y)		 		 % self.p_
+            S  = (4*P.X*Y2)				 % self.p_
+            # Z2 = P.Z2
+            Z4 = (P.Z2*P.Z2)			 % self.p_
+            aZ4= (self.a_*Z4)			 % self.p_
+            M  = (3*P.X*P.X+aZ4)		 % self.p_
+            eY4= (8*Y2*Y2)		 		 % self.p_
+            dS = (S + S)				 % self.p_
 
-        # slope m
-        m = ( 3*x**2    ) % self.p_
-        m = (m + self.a_) % self.p_
-        div = modulo.modular_inverse(2*y, self.p_)
-        m = m*div % self.p_
+            x  = (M*M-dS) 				 % self.p_
+            y  = (M*(S-x)-eY4)		 	 % self.p_
+            z  = (2*P.Y*P.Z)			 % self.p_
 
-        xo = (m**2 - x - x)    % self.p_
-        yo = (y + m*(xo - x) ) % self.p_
+            return ECP((x,y,z),self.p_)
 
-        Rneg = ECP( (xo, yo), self.p_ )
-        R = Rneg.neg_point(self.p_)
-        return R
+        else:           # Affine vesion
+            x = P.x_
+            y = P.y_
+
+            # slope m
+            m = ( 3*x**2    ) % self.p_
+            m = (m + self.a_) % self.p_
+            div = modulo.modular_inverse(2*y, self.p_)
+            m = m*div % self.p_
+
+            xo = (m**2 - x - x)    % self.p_
+            yo = (y + m*(xo - x) ) % self.p_
+
+            Rneg = ECP( (xo, yo), self.p_ )
+            return Rneg.neg_point()
 
     def Point_Add (self, P: ECP, Q: ECP) -> ECP:
         '''calculate R = P + Q, when P != Q '''
@@ -93,24 +122,54 @@ class ECC:
             return Q
         if Q.is_reverse(P):
             return self.UNIT
+        
+        if self.jcb:    # Jacobian vesion   
+            Pz2 = P.Z2
+            Qz2 = Q.Z2
 
-        # slope m
-        m = ( P.y_ - Q.y_  ) % self.p_
+            U1   = (P.X*Qz2)		% self.p_
+            U2   = (Q.X*Pz2) 		% self.p_
+
+            S1  = (P.Y*Qz2*Q.Z)  % self.p_
+            S2  = (Q.Y*Pz2*P.Z)  % self.p_
+
+            if (U1 == U2): 
+                if (S1!=S2): # opposite pair, P+Q = O
+                    return self.UNIT
+                else: 	# P = Q
+                    return self.Point_Dbl(P)
             
-        t2 = (P.x_ - Q.x_) % self.p_
-        if t2 < 0:
-            div = modulo.modular_inverse(t2+self.p_, self.p_)
-        else:
-            div = modulo.modular_inverse(t2, self.p_)
-        
-        m = m*div % self.p_
-        
-        xo = (m**2 - P.x_ - Q.x_)    % self.p_
-        yo = (P.y_ + m*(xo - P.x_) ) % self.p_
+            H    = (U2-U1)		% self.p_   
+            R    = (S2-S1)		% self.p_
+            H2   = (H*H) 		% self.p_
+            H3   = (H2*H)		% self.p_
 
-        Rneg = ECP( (xo, yo), self.p_ )
-        R = Rneg.neg_point(self.p_)
-        return R
+            x 	 = (R*R-H3-2*U1*H2 )        % self.p_
+            y    = (R*(U1*H2-x)-S1*H3 )     % self.p_
+            z    = (H*P.Z*Q.Z)		        % self.p_
+
+            return ECP((x,y,z),self.p_)
+
+
+        else:           # Affine vesion
+            # slope m
+            m = ( P.y_ - Q.y_  ) % self.p_
+                
+            t2 = (P.x_ - Q.x_) % self.p_
+            if t2 < 0:
+                div = modulo.modular_inverse(t2+self.p_, self.p_)
+            else:
+                div = modulo.modular_inverse(t2, self.p_)
+            
+            m = m*div % self.p_
+            
+            xo = (m**2 - P.x_ - Q.x_)    % self.p_
+            yo = (P.y_ + m*(xo - P.x_) ) % self.p_
+
+            Rneg = ECP( (xo, yo), self.p_ )
+
+            return Rneg.neg_point()
+
 
     def Point_Add_General (self, P: ECP, Q: ECP) -> ECP:
         '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
@@ -121,34 +180,62 @@ class ECC:
         if Q.is_reverse(P):
             return self.UNIT
         
-        if P.is_equal(Q):
-        # slope m for Dbl
-            m = ( 3 * P.x_**2  ) % self.p_
-            m = ( m + self.a_  ) % self.p_
-            div = modulo.modular_inverse(2*P.y_, self.p_)
-            m = m*div % self.p_
+        if self.jcb:    # Jacobian vesion   
+            Pz2 = P.Z2
+            Qz2 = Q.Z2
 
-        else: 
-            m = ( P.y_ - Q.y_  ) % self.p_
+            U1   = (P.X*Qz2)		% self.p_
+            U2   = (Q.X*Pz2) 		% self.p_
+
+            S1  = (P.Y*Qz2*Q.Z)  % self.p_
+            S2  = (Q.Y*Pz2*P.Z)  % self.p_
+
+            if (U1 == U2): 
+                if (S1!=S2): # opposite pair, P+Q = O
+                    return self.UNIT
+                else: 	# P = Q
+                    return self.Point_Dbl(P)
             
-            t2 = (P.x_ - Q.x_) % self.p_
-            if t2 < 0:
-                div = modulo.modular_inverse(t2+self.p_, self.p_)
-            else:
-                div = modulo.modular_inverse(t2, self.p_)
-            m = m*div % self.p_
+            H    = (U2-U1)		% self.p_   
+            R    = (S2-S1)		% self.p_
+            H2   = (H*H) 		% self.p_
+            H3   = (H2*H)		% self.p_
 
-        # common for Output point:
-        xo = ( m**2 - P.x_ - Q.x_  ) % self.p_
-        if xo < 0:
-            xo += self.p_
-        yo = (P.y_ + m*(xo - P.x_) ) % self.p_
-        if yo < 0:
-            yo += self.p_
+            x 	 = (R*R-H3-2*U1*H2 )        % self.p_
+            y    = (R*(U1*H2-x)-S1*H3 )     % self.p_
+            z    = (H*P.Z*Q.Z)		        % self.p_
 
-        Rneg = ECP( (xo, yo) , self.p_)
-        R = Rneg.neg_point(self.p_)
-        return R
+            return ECP((x,y,z),self.p_)
+
+        else:
+            if P.is_equal(Q): # P == Q
+            # slope m for Dbl
+                m = ( 3 * P.x_**2  ) % self.p_
+                m = ( m + self.a_  ) % self.p_
+                div = modulo.modular_inverse(2*P.y_, self.p_)
+                m = m*div % self.p_
+
+            else: # P != Q
+                m = ( P.y_ - Q.y_  ) % self.p_
+                
+                t2 = (P.x_ - Q.x_) % self.p_
+                if t2 < 0:
+                    div = modulo.modular_inverse(t2+self.p_, self.p_)
+                else:
+                    div = modulo.modular_inverse(t2, self.p_)
+                m = m*div % self.p_
+
+            # common for Output point:
+            xo = ( m**2 - P.x_ - Q.x_  ) % self.p_
+            if xo < 0:
+                xo += self.p_
+            yo = (P.y_ + m*(xo - P.x_) ) % self.p_
+            if yo < 0:
+                yo += self.p_
+
+            Rneg = ECP( (xo, yo) , self.p_)
+
+            return Rneg.neg_point()
         
     def Point_Mult(self, k:int, Pin: ECP, method = 1) -> ECP:
         ''' Point multiply by scalar k'''

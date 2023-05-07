@@ -6,7 +6,7 @@ from log import log
 
 ###################################################
 
-class ECP:
+class ECP_AFF:
     ''' EC point class, affine coordinate'''
     def __init__(self, P, p:int):
         '''P EC affine point: tuple of (x, y)
@@ -38,9 +38,9 @@ class ECP:
         if (self.x_ == P.x_) and (self.y_ == P.y_):
             return True
     
-    def neg_point(self, mod):
-        ret = (self.x_, mod - self.y_)
-        return ECP(ret, self.p)
+    def neg_point(self):
+        ret = (self.x_, self.p - self.y_)
+        return ECP_AFF(ret, self.p)
 
     def print_point(self, format:str = 'hex'):
         if format == 'hex':
@@ -71,7 +71,7 @@ class ECP:
         return PC + ret
     
 
-class JCB_ECP():
+class ECP_JCB():
     ''' EC point class, Jacobian coordinate '''
     def __init__(self, P, p):
         '''P EC Jacobian point: tuple of (x, y, z)
@@ -80,10 +80,11 @@ class JCB_ECP():
         assert (P[0] >= 0 ), "ECP.x must be >=0"
         assert (P[1] >= 0 ), "ECP.y must be >=0"
         assert (P[2] >= 0 ), "ECP.z must be >=0"
+        assert (p > 0 ), "p must be >0"
 
-        self.X = P[0]
-        self.Y = P[1]
-        self.Z = P[2]
+        self.X = P[0] % p
+        self.Y = P[1] % p
+        self.Z = P[2] % p
         self.p = p
 
         # calcuate in advanced
@@ -104,7 +105,7 @@ class JCB_ECP():
         return self.Z % self.p
 
     def get_ecp(self):
-        return ECP( (self.get_x() , self.get_y()), self.p )
+        return ECP_AFF( (self.get_x() , self.get_y()), self.p )
 
     def is_Unit_Point(self):
         '''JCB point Unit point (kp, kp, k)'''
@@ -112,23 +113,32 @@ class JCB_ECP():
             return True
         else:
             return False
-    
-    def neg_point(self):
-        return JCB_ECP(self.X, (self.p - self.Y) % self.p, self.Z, self.p)
 
-    def print_point(self, method): 
+    def is_reverse(self, P):
+        if (self.X == P.X % self.p) and (self.Y == self.p - P.Y % self.p):
+            return True    
+        
+    def is_equal(self, P):
+        if (self.X == P.X % self.p) and (self.Y == P.Y % self.p) and (self.Z == P.Z % self.p):
+            return True        
+        
+    def neg_point(self):
+        return ECP_JCB( (self.X, (self.p - self.Y) % self.p, self.Z), self.p)
+
+    def print_point(self, method='affine'): 
         if self.is_Unit_Point():
-            print("A Jacobian Identity Point (.x=p) nothing print")
-        elif (method == 'affine') :
+            print("this is an Unit Point!")
+
+        if (method == 'affine') :
             x_a = self.get_x()
             y_a = self.get_y()
             print("Point.x(affine): ", hex( x_a ) )
             print("Point.y(affine): ", hex( y_a ) )
 
             print ("\n")
-            return ECP ( (x_a, y_a) , self.p)
+            return ECP_AFF ( (x_a, y_a) , self.p)
 
-        else:
+        elif (method == 'jacobian'):
             print("Point.X(Jacob):  ", hex( self.X ) )
             print("Point.Y(Jacob):  ", hex( self.Y ) )
             print("Point.Z(Jacob):  ", hex( self.Z ) )
