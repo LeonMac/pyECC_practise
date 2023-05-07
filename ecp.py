@@ -8,14 +8,14 @@ from log import log
 
 class ECP:
     ''' EC point class, affine coordinate'''
-    def __init__(self, P):
+    def __init__(self, P, p:int):
         '''P must be tuple of (x, y)'''
         assert (P[0] >= 0 ), "ECP.x must be >=0"
         assert (P[1] >= 0 ), "ECP.y must be >=0"
 
         self.x_ = P[0]
         self.y_ = P[1]
-        # self.p  = p
+        self.p  = p
 
         # if self.is_Unit_Point():
         #     log('i', "This is the UNIT Point!")
@@ -28,8 +28,8 @@ class ECP:
         else:
             return False
 
-    def is_reverse(self, P, p):
-        if (self.x_ ==P.x_) and (self.y_ == p - P.y_):
+    def is_reverse(self, P):
+        if (self.x_ ==P.x_) and (self.y_ == self.p - P.y_):
             return True
 
     def is_equal(self, P):
@@ -38,7 +38,7 @@ class ECP:
     
     def neg_point(self, mod):
         ret = (self.x_, mod - self.y_)
-        return ECP(ret)
+        return ECP(ret, self.p)
 
     def print_point(self, format:str = 'hex'):
         if format == 'hex':
@@ -100,11 +100,11 @@ class JCB_ECP():
         return self.Z % self.p
 
     def get_ecp(self):
-        return ECP( (self.get_x() , self.get_y()) )
+        return ECP( (self.get_x() , self.get_y()), self.p )
 
     def is_Unit_Point(self):
-        '''JCB point Unit point (p, 0, no_matter) ? why'''
-        if self.X == self.p and self.Y == 0:
+        '''JCB point Unit point (kp, kp, k)'''
+        if self.X % self.p == 0 and self.Y % self.p == 0:
             return True
         else:
             return False
@@ -122,7 +122,7 @@ class JCB_ECP():
             print("Point.y(affine): ", hex( y_a ) )
 
             print ("\n")
-            return ECP ( (x_a, y_a) )
+            return ECP ( (x_a, y_a) , self.p)
 
         else:
             print("Point.X(Jacob):  ", hex( self.X ) )

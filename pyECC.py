@@ -83,7 +83,7 @@ class ECC_Curve ():
         else:
             assert False, f"Un-support curve id {curve_id}!"
 
-        self.G  = ECP( (self.Gx, self.Gy) )
+        self.G  = ECP( (self.Gx, self.Gy), self.p )
 
         self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name)
         # self.U  = self.curve.UNIT
@@ -145,7 +145,7 @@ class ECC_Curve ():
         u2 = (r * s_inv) % self.n
 
         u1G = self.curve.Point_Mult(u1, self.G, 0)
-        u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y)), 0)
+        u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y), self.p), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
 
@@ -196,7 +196,7 @@ class ECC_Curve ():
 
         self.SigBody_Validate(r, s, e, p_x, p_y)
 
-        P = ECP((p_x, p_y))
+        P = ECP((p_x, p_y), self.p)
 
         if not  self.curve.ECP_on_curve(P):
             print ("provided pubkey is not on curve")
@@ -337,7 +337,7 @@ class ECC_Curve ():
         C1_x = C[2 : 2*(key_byte_len)+2]
         C1_y = C[2*key_byte_len+2 : 4*key_byte_len+2]
 
-        C1 = ECP ((int(C1_x,16), int(C1_y,16)))
+        C1 = ECP ((int(C1_x,16), int(C1_y,16)), self.p)
 
         if not self.curve.ECP_on_curve(C1):
             assert False, f"recovered C1 point is not on curve"
@@ -428,7 +428,7 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
 
         # pub_key  = curve_ins.PubKey_Gen(priv_key, verb=False)
         # P = (x,y)
-        # if not pub_key.is_equal(ECP(P)):
+        # if not pub_key.is_equal(ECP(P, curve_ins.p)):
         #     log('w', "Pubkey is different!")
         
         i+=1

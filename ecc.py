@@ -25,7 +25,7 @@ class ECC:
 
         assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
 
-        self.UNIT = ECP ( (0,0) )
+        self.UNIT = ECP ( (0,0), self.p_ )
         
         log('i', f"EC Curve: {self.name} init done" )
 
@@ -53,7 +53,7 @@ class ECC:
         xo = (m**2 - x - x)    % self.p_
         yo = (y + m*(xo - x) ) % self.p_
 
-        Rneg = ECP( (xo, yo) )
+        Rneg = ECP( (xo, yo), self.p_ )
         R = Rneg.neg_point(self.p_)
         return R
 
@@ -63,7 +63,7 @@ class ECC:
             return P
         if P.is_Unit_Point():
             return Q
-        if Q.is_reverse(P, self.p_):
+        if Q.is_reverse(P):
             return self.UNIT
 
         # slope m
@@ -80,7 +80,7 @@ class ECC:
         xo = (m**2 - P.x_ - Q.x_)    % self.p_
         yo = (P.y_ + m*(xo - P.x_) ) % self.p_
 
-        Rneg = ECP( (xo, yo) )
+        Rneg = ECP( (xo, yo), self.p_ )
         R = Rneg.neg_point(self.p_)
         return R
 
@@ -90,7 +90,7 @@ class ECC:
             return P
         if P.is_Unit_Point():
             return Q
-        if Q.is_reverse(P, self.p_):
+        if Q.is_reverse(P):
             return self.UNIT
         
         if P.is_equal(Q):
@@ -118,7 +118,7 @@ class ECC:
         if yo < 0:
             yo += self.p_
 
-        Rneg = ECP( (xo, yo) )
+        Rneg = ECP( (xo, yo) , self.p_)
         R = Rneg.neg_point(self.p_)
         return R
         

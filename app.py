@@ -24,7 +24,7 @@ class sm2_En_De():
         assert fmt in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{fmt}"
         x_hexstr = input("please paste the receiver's public key x (hex with '0x' prefix):")
         y_hexstr = input("please paste the receiver's public key y (hex with '0x' prefix):")
-        Pb = ECP((int(x_hexstr, 16), int(y_hexstr, 16)))
+        Pb = ECP((int(x_hexstr, 16), int(y_hexstr, 16)), self.sm2.p)
         #Pb.print_point()
 
         M = input("please input the message you want to encrypt by using sm2:")
