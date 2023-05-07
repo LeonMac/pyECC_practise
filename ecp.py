@@ -25,19 +25,14 @@ class ECP_AFF:
         self.y_even = (self.y_ & 0b1) # ry odd (1) even (0)
 
     def is_Unit_Point(self):
-        if self.x_ == 0 and self.y_ == 0:
-            return True
-        else:
-            return False
+        return ( self.x_ == 0 and self.y_ == 0 )
 
     def is_reverse(self, P):
-        if (self.x_ ==P.x_) and (self.y_ == self.p - P.y_):
-            return True
+        return (self.x_ == P.x_ and self.y_ == self.p - P.y_)
 
     def is_equal(self, P):
-        if (self.x_ == P.x_) and (self.y_ == P.y_):
-            return True
-    
+        return (self.x_ == P.x_ and self.y_ == P.y_)
+
     def neg_point(self):
         ret = (self.x_, self.p - self.y_)
         return ECP_AFF(ret, self.p)
@@ -115,12 +110,10 @@ class ECP_JCB():
             return False
 
     def is_reverse(self, P):
-        if (self.X == P.X % self.p) and (self.Y == self.p - P.Y % self.p):
-            return True    
+        return ( self.get_x() == P.get_x() and (self.get_y() == self.p - P.get_y()) )
         
     def is_equal(self, P):
-        if (self.X == P.X % self.p) and (self.Y == P.Y % self.p) and (self.Z == P.Z % self.p):
-            return True        
+        return ( self.get_x() == P.get_x() and self.get_y() == P.get_y() )
         
     def neg_point(self):
         return ECP_JCB( (self.X, (self.p - self.Y) % self.p, self.Z), self.p)
