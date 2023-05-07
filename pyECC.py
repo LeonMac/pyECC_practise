@@ -126,13 +126,21 @@ class ECC_Curve ():
         s  = 0
         while not rx and not s:
             R  = self.PubKey_Gen(randk, verb)
-            rx = R.x_
-            #ry = R.y_
+            if USE_JCB:
+                rx = R.get_x()
+                pub_x = pub_key.get_x()
+                pub_y = pub_key.get_y()
+
+            else:    
+                rx = R.x_
+                pub_x = pub_key.x_
+                pub_y = pub_key.y_
+            
             s = ((z + rx * priv_key) * modulo.modular_inverse(randk, self.n)) % self.n
 
         '''todo: low-x here rx is possibly > n? in such case do we need reduce rx by rx-n?'''
         '''todo: low-s here s is possibly > n/2?'''
-        return (rx, s, z, pub_key.x_, pub_key.y_)
+        return (rx, s, z, pub_x, pub_y)
 
     def SigBody_Validate(self, r, s, z, x, y):
         assert r < self.n , "Provided sig.s >= curve n!"
@@ -152,11 +160,17 @@ class ECC_Curve ():
         u2 = (r * s_inv) % self.n
 
         u1G = self.curve.Point_Mult(u1, self.G, 0)
-        u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y), self.p), 0)
+
+        if USE_JCB:
+            u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y, 1), self.p), 0)
+        else:
+            u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y), self.p), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
-
-        ret = ( r  == (R.x_ % self.n) ) ## signature verify pass/fail
+        if USE_JCB:
+            ret = ( r  == (R.get_x() % self.n) ) 
+        else: 
+            ret = ( r  == (R.x_ % self.n) )
         return ret
     
     def SM2_Sig_Gen(self, priv_key, randk, ZaM, formt:str, verb: bool):
@@ -178,6 +192,12 @@ class ECC_Curve ():
 
         Pub = self.curve.Point_Mult(da, self.G, 0)
 
+        if USE_JCB:
+            pub_x, pub_y = Pub.get_x(), Pub.get_y() 
+        else:
+            pub_x, pub_y = Pub.x_, Pub.y_
+
+
         del k_temp
 
         while s == 0 :
@@ -188,22 +208,27 @@ class ECC_Curve ():
                     k = randk
 
                 kG = self.curve.Point_Mult(k, self.G, 0)
-                r = (e + kG.x_) % self.n
+                if USE_JCB:
+                    r = (e + kG.get_x()) % self.n
+                else:
+                    r = (e + kG.x_) % self.n
             #print("x1      : 0x%064x" %(x1) )
             rda   = ( r * da ) % self.n
             k_rda = ( k - rda) % self.n
             da1_inv = modulo.modular_inverse(da+1, self.n)
             s = ( da1_inv * k_rda ) % self.n
 
-        return (r, s, e, Pub.x_, Pub.y_) 
+        return (r, s, e, pub_x, pub_y) 
 
     def SM2_Sig_Verify(self, r, s, e, p_x, p_y):
         ''' SM2 Spec, Part 2, 6.2 '''
         assert self.family != "NIST", f"this config is NOT for SM2"
 
         self.SigBody_Validate(r, s, e, p_x, p_y)
-
-        P = ECP((p_x, p_y), self.p)
+        if USE_JCB:
+            P = ECP((p_x, p_y, 1), self.p)
+        else:
+            P = ECP((p_x, p_y), self.p)
 
         if not  self.curve.ECP_on_curve(P):
             print ("provided pubkey is not on curve")
@@ -222,7 +247,10 @@ class ECC_Curve ():
         tP = self.curve.Point_Mult(t, P, 0)
 
         R = self.curve.Point_Add_General (sG, tP)
-        rv = (e + R.x_) % self.n
+        if USE_JCB:
+            rv = (e + R.get_x()) % self.n
+        else:
+            rv = (e + R.x_) % self.n
 
         if rv == r:
             print("signature verify Pass")
@@ -344,7 +372,10 @@ class ECC_Curve ():
         C1_x = C[2 : 2*(key_byte_len)+2]
         C1_y = C[2*key_byte_len+2 : 4*key_byte_len+2]
 
-        C1 = ECP ((int(C1_x,16), int(C1_y,16)), self.p)
+        if USE_JCB:
+            C1 = ECP ((int(C1_x,16), int(C1_y,16), 1), self.p)
+        else:
+            C1 = ECP ((int(C1_x,16), int(C1_y,16)), self.p)
 
         if not self.curve.ECP_on_curve(C1):
             assert False, f"recovered C1 point is not on curve"

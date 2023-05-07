@@ -4,7 +4,7 @@ An ECC crypto library based upon python native library.
 ## What are implemented
 
 ### low level (common)
-- EC Point class
+- EC Point class (in ecp.py, including affine coordinate and jacobian coordinate)
 - EC Curve class and Point Operation on curve
 
 ### ECC application standard
@@ -21,6 +21,14 @@ An ECC crypto library based upon python native library.
 cd path_of_project
 python pyECC.py
 ```
+
+## How to switch-over between affine coordinate and jacobian coordinate
+Go to config.py, change the global paramter USE_JCB:
+```shell
+USE_JCB = True   # jacobian coordinate
+USE_JCB = False  # affine coordinate
+```
+
 
 ## A SM2 encryption / decryption playground test
 

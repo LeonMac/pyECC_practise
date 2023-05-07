@@ -85,6 +85,7 @@ class ECP_JCB():
         # calcuate in advanced
         self.Z2 = (self.Z  * self.Z) % self.p
         self.Z3 = (self.Z2 * self.Z) % self.p
+        self.y_even = (self.get_y() & 0b1) # ry odd (1) even (0)
 
     def get_x(self):
         ''' x = X / Z^2 % p '''
@@ -137,3 +138,23 @@ class ECP_JCB():
             print("Point.Z(Jacob):  ", hex( self.Z ) )
             print ("\n")
             return (self.X , self.Y , self.Z, self.p)
+
+    def hex_str(self, format='xy', compress = False):
+        if   format == 'xy':
+            ret = "{:064x}".format(self.get_x()) + "{:064x}".format(self.get_y())
+        elif format == 'x':
+            ret = "{:064x}".format(self.get_x())
+        elif format == 'y':
+            ret = "{:064x}".format(self.get_y())
+
+        if compress:
+            if self.y_even:
+                PC = '03'
+            else:
+                PC = '02'
+        elif compress == False:
+            PC = '04'
+        elif compress == None:
+            PC = ''
+        
+        return PC + ret
