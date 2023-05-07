@@ -22,8 +22,10 @@ USE_JCB = False
 
 if USE_JCB:
     from ecp import JCB_ECP as ECP
+    print(f"Flag USE_JCB ={USE_JCB}, use Jacobian coordinate!")
 else:
     from ecp import ECP as ECP
+    print(f"Flag USE_JCB ={USE_JCB}, use Affine coordinate!")
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''

@@ -9,7 +9,9 @@ from log import log
 class ECP:
     ''' EC point class, affine coordinate'''
     def __init__(self, P, p:int):
-        '''P must be tuple of (x, y)'''
+        '''P EC affine point: tuple of (x, y)
+           p : curve prime 
+        '''
         assert (P[0] >= 0 ), "ECP.x must be >=0"
         assert (P[1] >= 0 ), "ECP.y must be >=0"
 
@@ -70,9 +72,11 @@ class ECP:
     
 
 class JCB_ECP():
-    ''' EC point class, jacobian coordinate '''
+    ''' EC point class, Jacobian coordinate '''
     def __init__(self, P, p):
-        '''P must be tuple of (x, y, z)'''
+        '''P EC Jacobian point: tuple of (x, y, z)
+           p : curve prime 
+        '''
         assert (P[0] >= 0 ), "ECP.x must be >=0"
         assert (P[1] >= 0 ), "ECP.y must be >=0"
         assert (P[2] >= 0 ), "ECP.z must be >=0"

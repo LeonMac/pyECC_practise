@@ -10,7 +10,13 @@ from ecp import ECP, JCB_ECP
 
 class ECC:
     '''EC curve class'''
-    def __init__(self, a, b, n, p, G:ECP, curve_id, name):
+    def __init__(self, a:int, b:int, n:int, p:int, G:ECP, curve_id:int, name:str, jcb:bool = False):
+        '''
+        a, b, n, p, G: ECC domain parameters
+        curve_id: for identify curve (secp256k1/p1, sm2)
+        name: str of curve name
+        jcb : bool, ECP is affine(default) or Jacobian
+        '''
         self.a_ = a
         self.b_ = b
         self.n_ = n
@@ -21,11 +27,16 @@ class ECC:
         self.id_= curve_id
         self.name = name
 
+        self.jcb = jcb
+
         assert ((4* self.a_**3 + 27* self.b_**2) != 0), "Provided a and b not fit EC curve definition! "
 
         assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
 
-        self.UNIT = ECP ( (0,0), self.p_ )
+        if self.jcb:
+            self.UNIT = ECP ( (0,0,1), self.p_ )
+        else:
+            self.UNIT = ECP ( (0,0), self.p_ )
         
         log('i', f"EC Curve: {self.name} init done" )
 
