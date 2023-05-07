@@ -10,7 +10,7 @@ from log import log, hex_show
 from log import print_divider as log_div
 
 import modulo
-from ecp import ECP, JCB_ECP
+
 from ecc import ECC, UNIT
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
@@ -18,6 +18,12 @@ SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
 SM2_TV_ID = 124 # 
 
+USE_JCB = False
+
+if USE_JCB:
+    from ecp import JCB_ECP as ECP
+else:
+    from ecp import ECP as ECP
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
