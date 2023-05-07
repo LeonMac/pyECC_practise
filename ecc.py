@@ -41,8 +41,25 @@ class ECC:
         log('i', f"EC Curve: {self.name} init done" )
 
     def ECP_on_curve(self, P: ECP) -> bool:
-        left  = (P.y_** 2) % self.p_
-        right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
+        if self.jcb:
+            x = P.get_x()
+            y = P.get_y()
+
+        else:
+            x = P.x_
+            y = P.y_
+
+        y2 = (y*y)  % self.p_
+        x2 = (x*x)  % self.p_
+        x3 = (x2*x) % self.p_
+        ax = (self.a_ * x) % self.p_
+
+        left  = y2
+        right = (x3 + ax + self.b_) % self.p_
+
+        # left  = (P.y_** 2) % self.p_
+        # right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
+
         on_curve = (left == right)
         if not on_curve:
             log('e', "Provided Point is NOT on curve: ")

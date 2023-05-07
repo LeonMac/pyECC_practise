@@ -18,7 +18,7 @@ SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
 SM2_TV_ID = 124 # 
 
-USE_JCB = False
+USE_JCB = True
 
 if USE_JCB:
     from ecp import JCB_ECP as ECP
@@ -84,11 +84,14 @@ class ECC_Curve ():
 
         else:
             assert False, f"Un-support curve id {curve_id}!"
+        if USE_JCB:
+            self.G  = ECP( (self.Gx, self.Gy, 1), self.p )
+        else:
+            self.G  = ECP( (self.Gx, self.Gy), self.p )
+        
+        self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name, USE_JCB)
 
-        self.G  = ECP( (self.Gx, self.Gy), self.p )
-
-        self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name)
-        # self.U  = self.curve.UNIT
+        
     
     def PubKey_Gen(self, k:int, verb: bool):
         '''Input: scalar k
