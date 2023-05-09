@@ -48,7 +48,7 @@ def half_extended_gcd(aa, bb):
 
 def modular_inverse(a, m):
     ''' compute the multiplicative inverse, i.e. for x*a = a*x = 1 (mod m), return x '''
-    assert a>0 , "The operator value a must be >0 for this pllication"
+    assert a>0 , f"a={a}: The operator value a must be >0 for this appllication"
     g, x = half_extended_gcd(a, m)
     if g != 1:
         raise ValueError

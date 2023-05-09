@@ -15,8 +15,8 @@ class ECP_AFF:
         assert (P[0] >= 0 ), "ECP.x must be >=0"
         assert (P[1] >= 0 ), "ECP.y must be >=0"
 
-        self.x_ = P[0]
-        self.y_ = P[1]
+        self.x_ = P[0] % p
+        self.y_ = P[1] % p
         self.p  = p
 
         # if self.is_Unit_Point():
@@ -106,7 +106,7 @@ class ECP_JCB():
     def is_Unit_Point(self):
         '''JCB point Unit point'''
         # if self.X % self.p == 0 and self.Y % self.p == 0:
-        return ( self.get_x() == 0 and  self.get_y() ==  0  )
+        return ( (self.get_x() == 0 ) and  (self.get_y() ==  0)  )
 
     def is_reverse(self, P):
         return ( self.get_x() == P.get_x() and (self.get_y() == self.p - P.get_y()) )
@@ -135,7 +135,7 @@ class ECP_JCB():
             print("Point.Y(Jacob):  ", hex( self.Y ) )
             print("Point.Z(Jacob):  ", hex( self.Z ) )
             print ("\n")
-            return (self.X , self.Y , self.Z, self.p)
+            return ECP_JCB ((self.X , self.Y , self.Z), self.p)
 
     def hex_str(self, format='xy', compress = False):
         if   format == 'xy':

@@ -168,11 +168,16 @@ class ECC:
 
     def Point_Add_General (self, P: ECP, Q: ECP) -> ECP:
         '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
+        log_coordinate = 'jacobian' if (self.jcb) else 'affine' 
         if Q.is_Unit_Point():
+            print('point add: Q is unitpoint')
+            Q.print_point(log_coordinate)
             return P
         if P.is_Unit_Point():
+            print('point add: P is unitpoint')
             return Q
         if Q.is_reverse(P):
+            print('point add: P is reverse of Q')
             return self.UNIT
         
         if self.jcb:    # Jacobian vesion   
@@ -240,10 +245,16 @@ class ECC:
         if (k % self.n_) == 0 or Pin.is_Unit_Point():
             return self.UNIT
 
-        i = k
+
         R = self.UNIT
         P = Pin
-        if method == 0:
+        l = k.bit_length()
+        j = l-1    #  j-1 to 0
+
+        # problem implementation: to be debug
+        '''
+        i = k     
+        if method == 0:  # use Point Add and Point Double
             while i:
                 if i & 0x1: # when i[bit0] == 1
                     R = self.Point_Add(P, R)
@@ -251,12 +262,39 @@ class ECC:
                 P = self.Point_Dbl(P)
                 i >>= 1
 
-        if method == 1:
+        if method == 1:  # use general Point Add
             while i:
                 if i & 0x1: # when i[bit0] == 1
                     R = self.Point_Add_General(P, R)
 
                 P = self.Point_Add_General(P, P)
                 i >>= 1       
+        '''
+        # if method == 0:  # use Point Add and Point Double
+        #     while j >= 0:
+        #         R = self.Point_Dbl( R )
+        #         msb = (k >> j) & 0x1
+        #         if msb:
+        #             R = self.Point_Add(R, P)
 
+        #         j -= 1
+
+        # if method == 1:  # use General Point Add
+        #     while j >= 0:
+        #         R = self.Point_Add_General(R, R)
+        #         msb = (k >> j) & 0x1
+        #         if msb:
+        #             R = self.Point_Add_General(P, R)
+
+        #         j -= 1
+
+        while j >= 0:
+            R = self.Point_Dbl( R ) if method == 0 else self.Point_Add_General(R, R)
+            msb = (k >> j) & 0x1
+            if msb:
+                R = self.Point_Add(R, P) if method == 0 else self.Point_Add_General(P, R)
+
+            j -= 1
+
+        
         return R
