@@ -10,12 +10,8 @@ from config import USE_JCB
 
 if USE_JCB:
     from ecp import ECP_JCB as ECP
-    INIT_MSG = "Jacobian Coordinate"
-    # print(f"Flag USE_JCB ={USE_JCB}, use Jacobian coordinate!")
 else:
     from ecp import ECP_AFF as ECP
-    # print(f"Flag USE_JCB ={USE_JCB}, use Affine coordinate!")
-    INIT_MSG = "Jacobian Coordinate"
 
 
 class ECC:
@@ -45,8 +41,10 @@ class ECC:
 
         if self.jcb:
             self.UNIT = ECP ( (0,0,1), self.p_ )
+            INIT_MSG = "Jacobian Coordinate"
         else:
             self.UNIT = ECP ( (0,0), self.p_ )
+            INIT_MSG = "Affine Coordinate"
         
         log('i', f"EC Curve: {self.name} init done, we use {INIT_MSG}" )
 
@@ -66,9 +64,6 @@ class ECC:
 
         left  = y2
         right = (x3 + ax + self.b_) % self.p_
-
-        # left  = (P.y_** 2) % self.p_
-        # right = (P.x_** 3 + self.a_ * P.x_ + self.b_ ) % self.p_
 
         on_curve = (left == right)
         if not on_curve:

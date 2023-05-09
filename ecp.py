@@ -98,17 +98,15 @@ class ECP_JCB():
         return (self.Y * Z3_inv) % self.p
 	
     def get_z(self):
-        return self.Z % self.p
+        return self.Z
 
     def get_ecp(self):
         return ECP_AFF( (self.get_x() , self.get_y()), self.p )
 
     def is_Unit_Point(self):
-        '''JCB point Unit point (kp, kp, k)'''
-        if self.X % self.p == 0 and self.Y % self.p == 0:
-            return True
-        else:
-            return False
+        '''JCB point Unit point'''
+        # if self.X % self.p == 0 and self.Y % self.p == 0:
+        return ( self.get_x() == 0 and  self.get_y() ==  0  )
 
     def is_reverse(self, P):
         return ( self.get_x() == P.get_x() and (self.get_y() == self.p - P.get_y()) )
