@@ -1,5 +1,27 @@
 from log import log
 
+from decimal import Decimal
+from config import TIMING_MEASURE
+
+## timing decorator
+def timing_log(func):
+    """decoration for timing calculation"""
+
+    if TIMING_MEASURE:
+        import timeit
+        def get_timing(*args, **kwargs):
+            _begin = timeit.default_timer()
+            result = func(*args, **kwargs)
+            duration = timeit.default_timer() - _begin
+            d = Decimal(str(duration)).quantize(Decimal("0.001"), rounding = "ROUND_HALF_UP")
+            d_str = f"time: {d} sec"
+            print(f"{func.__name__} takes {d_str} seconds\n")
+            return result, d_str
+        return get_timing
+    else:
+        return None
+
+
 # https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Cr2.pdf
 # pip install bitstring if not 
 # https://bitstring.readthedocs.io/en/latest/walkthrough.html

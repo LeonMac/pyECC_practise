@@ -4,14 +4,13 @@
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
-# from scipy.misc import derivative
-
 from log import log, hex_show
 from log import print_divider as log_div
 
 import modulo
 
 from ecc import ECC
+from support import timing_log
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
@@ -22,11 +21,9 @@ from config import USE_JCB
 
 if USE_JCB:
     from ecp import ECP_JCB as ECP
-    # print(f"Flag USE_JCB ={USE_JCB}, use Jacobian coordinate!")
     log_method = 'jacobian'
 else:
     from ecp import ECP_AFF as ECP
-    # print(f"Flag USE_JCB ={USE_JCB}, use Affine coordinate!")
     log_method = 'affine'
 
 class ECC_Curve ():
@@ -95,7 +92,7 @@ class ECC_Curve ():
 
         
     
-    def PubKey_Gen(self, k:int, verb: bool):
+    def PubKey_Gen(self, k:int, verb: bool = False):
         '''Input: scalar k
            Output kG '''
         Pubkey = self.curve.Point_Mult(k, self.G, 1)
@@ -436,6 +433,7 @@ class ECC_Curve ():
     
 
 ###########################################################
+@timing_log
 def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
     ''' signature generate and verify test '''
     from hash_lib import hash_256 as sha256
@@ -476,7 +474,7 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
 
     return test_pass
 
-
+@timing_log
 def ECDH_unit_test(curve_id, test_round):
     ''' ECDH test '''
     log('m', f"ECDH test, plan to run {test_round} rounds")
@@ -517,6 +515,7 @@ def ECDH_unit_test(curve_id, test_round):
 ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
 CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
 
+@timing_log
 def ECC_unit_test (curve_id:int, format = log_method):
     '''unit test for Point_Add Point_Double
        result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
@@ -595,7 +594,7 @@ def Curve_unit_test (curve_id):
     Pubkey = curve_ins.PubKey_Gen(k, True)
     log_div('line', 1)
 
-
+@timing_log
 def Point_Addition_HE_test (curve_id, test_round):
     '''Point Add homomorphic encryption test '''
     assert curve_id in CURVE_LIST, log('i', f"priovided curve_id = {curve_id} is not supported!")
@@ -659,7 +658,7 @@ def SM2_TV_Test():
     # curve_ins.SM2_Sig_Verify(r,s,z,P.x_,P.y_)
     curve_ins.SM2_Sig_Verify(r,s,z,x,y)
 
-
+@timing_log
 def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = False):
     
     cuv = ECC_Curve(cid)
@@ -717,10 +716,12 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = 
 if __name__ == '__main__':
     iter = 10
     log('m', "For check deatil, enable LOG_I/LOG_D option in config.py, and compare the result with online tools : http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html")
-    import timeit
+    # import timeit
+
+    # from support import timing
 
  
-    for cid in CURVE_LIST:
+    for cid in CURVE_LIST: # iterate all curves
         # ecc library test
         ECC_unit_test(cid)
         log_div('double', 1)
@@ -730,28 +731,25 @@ if __name__ == '__main__':
         log_div('double', 1)
 
         # EC Point_Addition_HE test
-        begin    = timeit.default_timer()
         Point_Addition_HE_test(cid, iter)
-        duration = timeit.default_timer() - begin
-        log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
-        log_div('double', 1)
 
         # signature gen/ verify test
-        begin    = timeit.default_timer()
         Sig_Verify_unit_test(cid, iter)
-        duration = timeit.default_timer() - begin
-        log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
         log_div('double', 1)
 
         # ECDH test
-        begin    = timeit.default_timer()
+        # begin    = timeit.default_timer()
         ECDH_unit_test(cid, iter)
-        duration = timeit.default_timer() - begin
-        log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
+        # duration = timeit.default_timer() - begin
+        # log('m', f"total time {duration:.2f} seconds, average {(duration/iter):.2f} seconds per iteration")
         log_div('double', 1)
 
-        #SM2_EN_DE_Test(SM2_TV_ID)       # test by using test vector from SM2 spec.
+        SM2_EN_DE_Test(SM2_TV_ID)       # test by using test vector from SM2 spec.
+        log_div('double', 1)
+
         SM2_EN_DE_Test(SM2_CV_ID, iter, 'c1c2c3', False)   # test by using random gen test vectors
         log_div('double', 1)
+
         SM2_EN_DE_Test(SM2_CV_ID, iter, 'c1c3c2', False)   # test by using random gen test vectors
+        log_div('double', 1)
 
