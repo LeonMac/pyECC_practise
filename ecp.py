@@ -3,6 +3,7 @@ rand = SystemRandom()   # cryptographic random byte generator
 
 import modulo
 from log import log
+from support import debug_control
 
 ###################################################
 
@@ -37,6 +38,7 @@ class ECP_AFF:
         ret = (self.x_, self.p - self.y_)
         return ECP_AFF(ret, self.p)
 
+    # @debug_control
     def print_point(self, format:str = 'hex'):
         if format == 'hex':
             log('d', f"Point.x(affine): {hex( self.x_ )}" )
@@ -117,25 +119,26 @@ class ECP_JCB():
     def neg_point(self):
         return ECP_JCB( (self.X, (self.p - self.Y) % self.p, self.Z), self.p)
 
-    def print_point(self, method='affine'): 
+    # @debug_control
+    def print_point(self, format='affine'): 
         if self.is_Unit_Point():
             print("this is an Unit Point!")
 
-        if (method == 'affine') :
+        if (format == 'affine') :
             x_a = self.get_x()
             y_a = self.get_y()
             print("Point.x(affine): ", hex( x_a ) )
             print("Point.y(affine): ", hex( y_a ) )
 
-            print ("\n")
-            return ECP_AFF ( (x_a, y_a) , self.p)
+            # return ECP_AFF ( (x_a, y_a) , self.p)
 
-        elif (method == 'jacobian'):
+        elif (format == 'jacobian'):
             print("Point.X(Jacob):  ", hex( self.X ) )
             print("Point.Y(Jacob):  ", hex( self.Y ) )
             print("Point.Z(Jacob):  ", hex( self.Z ) )
-            print ("\n")
-            return ECP_JCB ((self.X , self.Y , self.Z), self.p)
+        
+            # return ECP_JCB ((self.X , self.Y , self.Z), self.p)
+        print ("\n")
 
     def hex_str(self, format='xy', compress = False):
         if   format == 'xy':

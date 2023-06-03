@@ -5,16 +5,16 @@ import sys
 
 USE_JCB = True  # gobal config for jacobian (True) or affine (False)
 
-TIMING_MEASURE = True # gobal config for Timing test (True) or Not (False)
+TIMING_MEASURE = True # config for Timing test (True) or Not (False) in support.py
 
-# DEBUG = False
+DEBUG = False # config for debug decorator in support.py
 
 LOG_SHOW_CFG = {
-'LOG_I' : True,     #INFO
-'LOG_D' : True,     #DEBUG
+'LOG_I' : False,     #INFO
+'LOG_M' : False,     #MESSAGE,
+'LOG_D' : False,     #DEBUG
 'LOG_W' : True,     #WARNING
 'LOG_E' : True,     #ERROR
-'LOG_M' : True,     #MESSAGE, 
 }
 
 def py_version_good():
