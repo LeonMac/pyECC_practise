@@ -46,6 +46,9 @@ class ECP_AFF:
         elif format == 'dec':
             log('d', f"Point.x(affine): {self.x_ }") 
             log('d', f"Point.y(affine): {self.y_ }")
+        else:
+            log('w', f"unkown format signature {format}")
+
     
     def hex_str(self, format='xy', compress = False):
         if   format == 'xy':
@@ -127,17 +130,22 @@ class ECP_JCB():
         if (format == 'affine') :
             x_a = self.get_x()
             y_a = self.get_y()
-            print("Point.x(affine): ", hex( x_a ) )
-            print("Point.y(affine): ", hex( y_a ) )
+            log('d', f"Point.x(affine): {hex( x_a )}" )
+            log('d', f"Point.y(affine): {hex( y_a )}" )
 
             # return ECP_AFF ( (x_a, y_a) , self.p)
 
         elif (format == 'jacobian'):
-            print("Point.X(Jacob):  ", hex( self.X ) )
-            print("Point.Y(Jacob):  ", hex( self.Y ) )
-            print("Point.Z(Jacob):  ", hex( self.Z ) )
+            # print("Point.X(Jacob):  ", hex( self.X ) )
+            # print("Point.Y(Jacob):  ", hex( self.Y ) )
+            # print("Point.Z(Jacob):  ", hex( self.Z ) )
+            log('d', f"Point.X(Jacob):  {hex( self.X )}" )
+            log('d', f"Point.Y(Jacob):  {hex( self.Y )}" )
+            log('d', f"Point.Z(Jacob):  {hex( self.Z )}" )
         
             # return ECP_JCB ((self.X , self.Y , self.Z), self.p)
+        else:
+            log('w', f"unkown format signature {format}")
         print ("\n")
 
     def hex_str(self, format='xy', compress = False):

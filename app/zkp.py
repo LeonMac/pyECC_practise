@@ -2,8 +2,8 @@
 # a saimple zkp demo implementation based on ECC
 
 import sys, os
-sys_path = os.path.dirname(os.getcwd ())
-sys.path.append(sys_path)
+root_path = os.path.dirname(os.getcwd ())
+sys.path.append(root_path)
 
 # 3.1 Zero Knowledge Proof of Discrete Logarithm with Coin Flip
 import pyECC as ECC

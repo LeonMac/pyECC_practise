@@ -1,3 +1,12 @@
+import sys, os
+root_path = os.path.dirname(os.getcwd ())
+sys.path.append(root_path)
+
+from random import SystemRandom
+rand = SystemRandom()
+from ecc import ECP
+import pyECC as E
+
 class BitCoin():
     '''Bitcoin Address Generator
        This is only for study but NOT for production
@@ -10,6 +19,16 @@ class BitCoin():
 
         Pb   = self.sk1.PubKey_Gen(priv, False)
 
-        print('Your priv key (never disclose it to anybody):', "0x{:064x}".format(priv))
-        print('Your pub key:')
+        print('ECDSA Private Key:', "0x{:064x}".format(priv))
+        print('ECDSA Public  Key:')
         Pb.print_point('hex')
+
+
+    def __call__(self):
+        self.KeyPair_Gen()
+        
+
+if __name__ == '__main__':
+
+    btc_key = BitCoin()
+    btc_key()
