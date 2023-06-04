@@ -1,5 +1,8 @@
 # this is a playgound for using the ecc library
-# 
+import sys, os
+sys_path = os.path.dirname(os.getcwd ())
+sys.path.append(sys_path)
+
 from random import SystemRandom
 rand = SystemRandom()
 from ecc import ECP

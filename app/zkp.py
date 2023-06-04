@@ -1,6 +1,10 @@
 # https://arxiv.org/pdf/1107.1626.pdf
 # a saimple zkp demo implementation based on ECC
 
+import sys, os
+sys_path = os.path.dirname(os.getcwd ())
+sys.path.append(sys_path)
+
 # 3.1 Zero Knowledge Proof of Discrete Logarithm with Coin Flip
 import pyECC as ECC
 from ecc import ECP
@@ -56,7 +60,8 @@ def ZKP_DLwCF(cid:int, round:int, prover_honest:bool = True ):
         else:                           # if Prover is dis-honest, means he/she does not know x
             m   = tool.gen_rand()       # he prepares for TAILS 1). generate a random m, 2). compute A = m · G − B
             _, tempP  = tool.Mul_Point(m, tool.G) 
-            A   = tool.Add_Point(tempP, B.neg_point(tool.p))
+            # A   = tool.Add_Point(tempP, B.neg_point(tool.p))
+            A   = tool.Add_Point(tempP, B.neg_point())
             r   = tool.gen_rand()       # but he does not able to easily get r from the A, so get a rand r
 
         flip_coin = rand.randint( 0, 1 )  # Verifier flip the coin
@@ -114,7 +119,7 @@ def ZKP_Schnorr(cid:int, prover_honest:bool = True ):
 
     _, mG  = tool.Mul_Point(m, tool.G) # Verifier checks that P = m · G − c · B = (r + c · x)· G − c · B = r · G + c · x · G − c · x · G = r · G = A
     _, cB  = tool.Mul_Point(c, B)
-    P = tool.Add_Point(mG, cB.neg_point(tool.p))
+    P = tool.Add_Point(mG, cB.neg_point())
 
     if P.is_equal(A):
         OK = True
