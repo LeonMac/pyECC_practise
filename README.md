@@ -22,11 +22,17 @@ cd path_of_project
 python pyECC.py
 ```
 
-## How to switch-over between affine coordinate and jacobian coordinate
-Go to config.py, change the global paramter USE_JCB:
+## config
+find the config parameters in config.py
+
+### switch-over between affine coordinate and jacobian coordinate
 ```shell
 USE_JCB = True   # jacobian coordinate
 USE_JCB = False  # affine coordinate
+```
+### enable/disable the timing test
+```shell
+TIMING_MEASURE = True  # enable(True)/disable(False) timing test
 ```
 
 
