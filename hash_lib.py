@@ -1,4 +1,5 @@
 ###########################################################
+import pysmx
 
 def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256'):
 

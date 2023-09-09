@@ -70,7 +70,7 @@ class ECP_AFF:
         
         return PC + ret
     
-
+#todo jacobian mode timing is higher than affine, some operation need to be optimized
 class ECP_JCB():
     ''' EC point class, Jacobian coordinate '''
     def __init__(self, P, p):

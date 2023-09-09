@@ -2,13 +2,6 @@
 ### Global Config
 import sys
 
-
-USE_JCB = False  # gobal config for jacobian (True) or affine (False)
-
-TIMING_MEASURE = True # config for Timing test (True) or Not (False) in support.py
-
-DEBUG = False # config for debug decorator in support.py
-
 LOG_SHOW_CFG = {
 'LOG_I' : False,     #INFO
 'LOG_M' : False,     #MESSAGE,
@@ -19,5 +12,22 @@ LOG_SHOW_CFG = {
 
 def py_version_good():
     ver = sys.version_info
-    return (ver[0] == 3 and ver[1] > 6)
+    return (ver[0] == 3 and ver[1] > 7)
+
+
+def setup(jcb_or_affine: str = 'affine', timing_measure: bool = True, verbose: bool = False):
+    global USE_JCB # gobal config for jacobian (True) or affine (False) 
+
+    global TIMING_MEASURE # config for Timing test (True) or Not (False) in support.py
+
+    global DEBUG # config for debug decorator in support.py
+
+    USE_JCB = True if jcb_or_affine == 'jacobian' else False
+
+    TIMING_MEASURE = timing_measure
+
+    DEBUG = verbose
+
+
+setup('affine', True, False)
 

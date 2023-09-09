@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 
 #import random
 from random import SystemRandom
@@ -17,14 +18,6 @@ SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
 SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 
-from config import USE_JCB
-
-if USE_JCB:
-    from ecp import ECP_JCB as ECP
-    log_method = 'jacobian'
-else:
-    from ecp import ECP_AFF as ECP
-    log_method = 'affine'
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
@@ -714,12 +707,37 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = 
 ################################################
 ## main ##
 if __name__ == '__main__':
-    iter = 10
+    if len(sys.argv) != 5:
+        print(f"usage: python {sys.argv[0]} affine|jacobian iteration(int) timing_measure(bool) verbose(bool)")
+        assert False, f"only accept 5 arguments. you input {len(sys.argv)} args!"
+    
+    assert sys.argv[1] in ['affine','jacobian'], f'need 5 arguments. you input {len(sys.argv)} args!'
+    cord_formt = sys.argv[1]
+
+    try:
+        iter = int(sys.argv[2])  # Attempt to convert the string to an integer
+    except ValueError:
+        print(f"Input is not a valid integer string {sys.argv[2]}")
+
+    assert sys.argv[3] in ['true','false'], f'arg3 needs true or false, you input f{sys.argv[3] }!'
+    timing_measure = sys.argv[3]
+    assert sys.argv[4] in ['true','false'], f'arg4 needs true or false, you input f{sys.argv[3] }!'
+    verbose = sys.argv[4]
+    
     log('m', "For check deatil, enable LOG_I/LOG_D option in config.py, and compare the result with online tools : http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html")
-    # import timeit
 
-    # from support import timing
+    # from config import USE_JCB
+    import config
+    config.setup(cord_formt, timing_measure, verbose)
 
+    if cord_formt == 'jacobian':
+        from ecp import ECP_JCB as ECP
+        log_method = 'jacobian'
+        USE_JCB = True
+    else:
+        from ecp import ECP_AFF as ECP
+        log_method = 'affine'
+        USE_JCB = False
  
     for cid in CURVE_LIST: # iterate all curves
         # ecc library test

@@ -1,2 +1,2 @@
 bitstring==3.1.9
-pysmx==0.4.0
+snowland-smx==0.3.1
