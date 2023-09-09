@@ -1,6 +1,11 @@
 # pyECC_practise
 An ECC crypto library based upon python native library.
 
+## install pre-require
+```
+pip install -r requirements.txt
+``` 
+
 ## What are implemented
 
 ### low level (common)
