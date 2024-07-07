@@ -37,9 +37,7 @@ def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256')
     elif sha_type == 'ripemd160':
         dig = ripemd160(msg)
         if return_fmt == 'hex':
-            print(dig.hex())
-            return dig.hex()
-    
+            return int(dig.hex(), 16)
         else :
             return dig
 
@@ -52,12 +50,20 @@ def hash_512(message: str):
     return z
 
 
-def hash_test(msg:str, sha_type:str='sha256'):
+def hash_test(msg:str, msg_fmt = 'str', return_fmt = 'hex', sha_type:str='sha256'):
     '''sha256 can be checked directly by linux command line '''
     '''for exp echo -n msg | sha256sum '''
-    dig = hash_256(msg, 'str', 'hex', sha_type )
+    dig = hash_256(msg, msg_fmt, return_fmt, sha_type )
     print ("msg str = ", msg  )
-    print (f"dig[{sha_type}] = 0x%064x" %(dig) )
+    if sha_type in['sha256', 'sm3']:
+        sha_len = 256//4
+    elif  sha_type == 'ripemd160':
+        sha_len = 160//4
+    elif sha_type == 'sha512':
+        sha_len = 512//4
+    else: pass
+
+    print (f"dig[{sha_type}] = 0x%0{sha_len}x" %(dig) )
 
 if __name__ == '__main__':
     # https://docs.python.org/3/library/subprocess.html#subprocess.run
@@ -105,7 +111,12 @@ if __name__ == '__main__':
     '''Note this is not good example as it implicitly add \n after for all the string before doing hash!!'''
     test_seed = "this is a group of words that should not be considered random anymore so never use this to generate a private key\n"
 
-    hash_test(test_seed, 'sha256')
+    hash_test(test_seed, 'str', 'hex', 'sha256')
 
-    compress_pun_key_str = '023cba1f4d12d1ce0bced725373769b2262c6daa97be6a0588cfec8ce1a5f0bd09\n'
-    hash_test(compress_pun_key_str, 'ripemd160')
+    compress_pun_key_str = "023cba1f4d12d1ce0bced725373769b2262c6daa97be6a0588cfec8ce1a5f0bd09"
+
+    hash_test(bytes.fromhex(compress_pun_key_str), 'bytes', 'hex', 'sha256')
+
+    hashed_compress_key_str = '8eb001a42122826648e66005a549fc4b4511a7ad3fc378221aa1c73c5efe77ef'
+
+    hash_test(bytes.fromhex(hashed_compress_key_str), 'bytes', 'hex', 'ripemd160')
