@@ -13,6 +13,15 @@ import modulo
 from ecc import ECC
 from support import timing_log
 
+from config import USE_JCB
+
+if USE_JCB:
+    from ecp import ECP_JCB as ECP
+    log_method = 'jacobian' # 'affine'
+else:
+    from ecp import ECP_AFF as ECP
+    log_method = 'hex' # 'dec'
+
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed

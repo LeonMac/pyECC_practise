@@ -1,48 +1,63 @@
-###########################################################
-import pysmx
+
+# import pysmx
+from pysmx.SM3 import SM3   # https://gitee.com/snowlandltd/snowland-smx-python
+import hashlib
+from  rmd160 import ripemd160
+# print(hashlib.algorithms_available)
 
 def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256'):
+    """Not a good name--consider to change"""
 
     """Returns the SHA256 hash of the provided message (str or byte str)"""
     assert msg_fmt == 'str' or msg_fmt == 'bytes', f"not supported msg format = {msg_fmt}"
     assert return_fmt == 'hex' or return_fmt == 'bytes', f"not supported return format = {return_fmt}"
-    assert sha_type == 'sha256' or sha_type == 'sm3', f"not supported sha type = {sha_type}"
+    assert sha_type in ['sha256', 'sm3', 'ripemd160'], f"not supported sha type = {sha_type}"
 
-    if sha_type == 'sha256':
-        import hashlib
-        dig = hashlib.sha256()
-    else:
-        from pysmx.SM3 import SM3   # https://gitee.com/snowlandltd/snowland-smx-python
-        dig = SM3()
-    
     if msg_fmt == 'str':
         msg = message.encode("utf-8")   # convert str to bytes
     else:
-        msg = message    # if it is already bytes string           
+        msg = message    # if it is already bytes string    
 
-    # log('i', f"msg = {msg}, type {type(msg)}")
-    dig.update( msg )   # hash digest
+    if sha_type in ['sha256', 'sm3']:
+        if sha_type == 'sha256':
+            dig = hashlib.sha256()
+        # elif sha_type == 'ripemd160':
+        #     # dig = hashlib.rmd160() # does not work on some openssl version, use bitcoin script.
+        else:
+            dig = SM3()
+               
+        # log('i', f"msg = {msg}, type {type(msg)}")
+        dig.update( msg )   # hash digest
+        if return_fmt == 'hex':
+            return int(dig.hexdigest(), 16)
+    
+        else :
+            return dig.digest()
 
-    if return_fmt == 'hex':
-        return int(dig.hexdigest(), 16)
-    else :
-        return dig.digest()
+    elif sha_type == 'ripemd160':
+        dig = ripemd160(msg)
+        if return_fmt == 'hex':
+            print(dig.hex())
+            return dig.hex()
+    
+        else :
+            return dig
 
 
 def hash_512(message: str):
-    import hashlib
-    """Returns the SHA256 hash of the provided message string."""
+    """Returns the SHA512 hash of the provided message string."""
     dig = hashlib.sha512()
     dig.update( message.encode() ) # convert str to bytes
     z = int(dig.hexdigest(), 16)
     return z
 
-def hash_test(msg):
+
+def hash_test(msg:str, sha_type:str='sha256'):
     '''sha256 can be checked directly by linux command line '''
     '''for exp echo -n msg | sha256sum '''
-    dig = hash_256(msg)
-    print ("msg = ", msg  )
-    print ("dig = 0x%064x" %(dig) )
+    dig = hash_256(msg, 'str', 'hex', sha_type )
+    print ("msg str = ", msg  )
+    print (f"dig[{sha_type}] = 0x%064x" %(dig) )
 
 if __name__ == '__main__':
     # https://docs.python.org/3/library/subprocess.html#subprocess.run
@@ -85,3 +100,12 @@ if __name__ == '__main__':
     dig_test_actual = dig_test[2:]
     log('i', f"msg = {msg}, type {type(msg)}")
     log('i', f"dig_test_actual = {dig_test_actual}")
+
+    # ref https://medium.com/coinmonks/how-to-generate-a-bitcoin-address-step-by-step-9d7fcbf1ad0b
+    '''Note this is not good example as it implicitly add \n after for all the string before doing hash!!'''
+    test_seed = "this is a group of words that should not be considered random anymore so never use this to generate a private key\n"
+
+    hash_test(test_seed, 'sha256')
+
+    compress_pun_key_str = '023cba1f4d12d1ce0bced725373769b2262c6daa97be6a0588cfec8ce1a5f0bd09\n'
+    hash_test(compress_pun_key_str, 'ripemd160')
