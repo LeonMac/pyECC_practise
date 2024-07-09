@@ -4,6 +4,7 @@ from pysmx.SM3 import SM3   # https://gitee.com/snowlandltd/snowland-smx-python
 import hashlib
 from  rmd160 import ripemd160
 # print(hashlib.algorithms_available)
+from support import hexstr2byte
 
 def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256'):
     """Not a good name--consider to change"""
@@ -101,7 +102,7 @@ if __name__ == '__main__':
     
     log('i', f"sm3 test vector from spec.-->")
     hex_ = 0x64d20d27d0632957f8028c1e024f6b02edf23102a566c932ae8bd613a8e865fe656e6372797074696f6e207374616e6461726458d225eca784ae300a81a2d48281a828e1cedf11c4219099840265375077bf78
-    msg = bytes.fromhex(hex(hex_)[2:])
+    msg = hexstr2byte(hex(hex_)[2:])
     dig_test  = hex(hash_256 (msg, 'bytes', 'hex', 'sm3'))
     dig_test_actual = dig_test[2:]
     log('i', f"msg = {msg}, type {type(msg)}")
@@ -115,8 +116,8 @@ if __name__ == '__main__':
 
     compress_pun_key_str = "023cba1f4d12d1ce0bced725373769b2262c6daa97be6a0588cfec8ce1a5f0bd09"
 
-    hash_test(bytes.fromhex(compress_pun_key_str), 'bytes', 'hex', 'sha256')
+    hash_test(hexstr2byte(compress_pun_key_str), 'bytes', 'hex', 'sha256')
 
     hashed_compress_key_str = '8eb001a42122826648e66005a549fc4b4511a7ad3fc378221aa1c73c5efe77ef'
 
-    hash_test(bytes.fromhex(hashed_compress_key_str), 'bytes', 'hex', 'ripemd160')
+    hash_test(hexstr2byte(hashed_compress_key_str), 'bytes', 'hex', 'ripemd160')

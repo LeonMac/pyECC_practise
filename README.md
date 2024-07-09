@@ -21,10 +21,13 @@ pip install -r requirements.txt
 - EDCH (NIST and SM)
 - Message encryption/decryption (SM so far)
 
-## How to run demo tests
+## How to run full unit tests
 ```shell
 cd path_of_project
-python pyECC.py
+# usage: python pyECC.py affine|jacobian iteration(int) timing_measure(true/false) verbose(true|false)
+# example:
+python pyECC.py affine 1 false true
+
 ```
 
 ## config

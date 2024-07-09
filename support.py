@@ -37,6 +37,45 @@ def debug_control(func):
     else:
         pass
 
+HEX_CHR = '0123456789abcdefABCDEF'
+class NonHexCharErr(ValueError):
+    """Exception raised for errors in the input containing non-hex characters."""
+    pass
+    
+def hexstr2byte(hex_str:str):
+    """
+    Convert a hex string to a bytes object, removing the '0x' prefix if present.
+    
+    Args:
+        hex_str (str): The input hex string. It may start with '0x'.
+        
+    Returns:
+        bytes: The corresponding bytes object.
+        
+    Examples:
+        >>> hexstr2byte('0x1a2b3c')
+        b'\x1a+<'
+        >>> hexstr2byte('1a2b3c')
+        b'\x1a+<'
+    """
+    
+    if hex_str[:2] == '0x': 
+        hex_string = hex_str[2:]
+    else:
+        hex_string = hex_str
+
+    if len(hex_string) % 2 != 0:
+        hex_string = '0' + hex_string
+    # Check for non-hex characters
+    # if not all(c in HEX_CHR for c in hex_string):
+    for idx, char in enumerate(hex_string):
+        if char not in HEX_CHR:
+            raise NonHexCharErr(f"Input contains non-hex characters:{hex_str}, position[{idx}]: '{char}'")
+
+    return bytes.fromhex(hex_string)
+
+#############################
+
 # https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Cr2.pdf
 # pip install bitstring if not 
 # https://bitstring.readthedocs.io/en/latest/walkthrough.html
@@ -115,7 +154,7 @@ def SM2_KDF(Z, klen: int, dgest_type = 'sha256', input_fmt = 'str', return_fmt =
     if input_fmt == 'str':
         Z_byte = bytes(Z, encoding='UTF-8')  # convert Z string to byte
     else:
-        Z_byte = bytes.fromhex(Z)
+        Z_byte = hexstr2byte(Z)
 
     n = klen // v
 
@@ -181,8 +220,8 @@ if __name__ == '__main__':
     x2 = '64D20D27D0632957F8028C1E024F6B02EDF23102A566C932AE8BD613A8E865FE'
     y2 = '58D225ECA784AE300A81A2D48281A828E1CEDF11C4219099840265375077BF78'
     
-    #Z  = bytes.fromhex (x2) + bytes.fromhex (y2)
-    #Z  = bytes.fromhex (x2)[::-1] + bytes.fromhex (y2)[::-1]    # Endian convert
+    #Z  = hexstr2byte (x2) + hexstr2byte (y2)
+    #Z  = hexstr2byte (x2)[::-1] + hexstr2byte (y2)[::-1]    # Endian convert
     klen = 152
     Z   = x2 + y2
 

@@ -7,6 +7,7 @@ rand = SystemRandom()   # cryptographic random byte generator
 
 from log import log, hex_show
 from log import print_divider as log_div
+from support import hexstr2byte
 
 import modulo
 
@@ -327,7 +328,7 @@ class ECC_Curve ():
         C2_hex = C2.bytes.hex()
 
         Z = x2 + M_Byte.hex() + y2 # (x2 ∥ M ∥ y2 )
-        Z_bytes = bytes.fromhex(Z)
+        Z_bytes =hexstr2byte(Z)
         C3_hex = '{:064x}'.format(hash.hash_256(Z_bytes, 'bytes', 'hex', 'sm3')) #A7
         
         if ver == 'c1c2c3':
@@ -402,7 +403,7 @@ class ECC_Curve ():
         M_str = hex(M_)[2:]
 
         Z = x2 + M_str + y2 # (x2 ∥ M ∥ y2 )
-        Z_bytes = bytes.fromhex(Z)
+        Z_bytes =hexstr2byte(Z)
         
         u = '{:064x}'.format(hash.hash_256(Z_bytes, 'bytes', 'hex', 'sm3')) 
 

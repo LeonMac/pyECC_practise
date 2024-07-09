@@ -13,7 +13,9 @@ from random import SystemRandom
 rand = SystemRandom()
 # from ecp import ECP_AFF as ECP
 from hash_lib import hash_256
+from support import hexstr2byte
 import pyECC as E
+
 
 class BitCoinAddr():
     '''Bitcoin Address Generator
@@ -37,38 +39,43 @@ class BitCoinAddr():
 
         return Pb.hex_str(format='x', compress=True)
     
-    # def Hash(compressed_pub_str:str):
-    #     PubSha256 = hash_256(compressed_pub_str, 'str', 'hex', 'sha256')
-    #     PubRipemd160 = hash_256(PubSha256, 'str', 'hex', 'sha256')
-        
+    def Hash(compressed_pub_str:str, address_ver:str='P2PKH'):
+        dig_sha256 = hash_256(hexstr2byte(compressed_pub_str), 'bytes', 'hex', 'sha256')
+        dig_rip160 = hash_256(hexstr2byte(dig_sha256), 'bytes', 'hex', 'ripemd160')
+        # if address_ver == 'P2PKH':
+        #     return f"00{hex(dig_rip160)[2:]}" 
+        # elif address_ver == 'P2WPKH':
+        #     return f"0014{hex(dig_rip160)[2:]}" 
+        # return p2pkh_str
+    
 
 
     def __call__(self, priv_key = None):
         compress_pun_key_str = self.GenKeyPair(priv_key)
         print(f"compressed pubkey: {compress_pun_key_str}")
-        dig_sha256 = hash_256(bytes.fromhex(compress_pun_key_str), 'bytes', 'hex', 'sha256')
+        dig_sha256 = hash_256(hexstr2byte(compress_pun_key_str), 'bytes', 'hex', 'sha256')
         print(f"dig_sha256: {hex(dig_sha256)}")
-        dig_rip160 = hash_256(bytes.fromhex(hex(dig_sha256)[2:]), 'bytes', 'hex', 'ripemd160')
+        dig_rip160 = hash_256(hexstr2byte(hex(dig_sha256)[2:]), 'bytes', 'hex', 'ripemd160')
         print(f"dig_rip160: {hex(dig_rip160)}")
         pk2pkh_str = f"00{hex(dig_rip160)[2:]}" 
         print(f"P2PKH string: {pk2pkh_str}")
-        pk2pkh_b58 = base58.b58encode_check(bytes.fromhex(pk2pkh_str))
+        pk2pkh_b58 = base58.b58encode_check(hexstr2byte(pk2pkh_str))
         print(f'final address: {pk2pkh_b58.decode()}')
 
 def base58test(input_str: str = None):
     hex_str = '003a38d44d6a0c8d0bb84e0232cc632b7e48c72e0e' if input_str == None else input_str
 
-    byte_data = bytes.fromhex(hex_str)
+    byte_data = hexstr2byte(hex_str)
     encoded = base58.b58encode_check(byte_data)  # bitcoin base58 with checksum
     print(encoded.decode())
 
     ### native base58 with bitcoin doulbe sha256 attached as checksum implementation
 
-    sha_1st = hash_256(bytes.fromhex(hex_str), 'bytes', 'hex', 'sha256')
+    sha_1st = hash_256(hexstr2byte(hex_str), 'bytes', 'hex', 'sha256')
     print(f"dig_sha1st: {hex(sha_1st)}")
-    sha_2nd = hash_256(bytes.fromhex(hex(sha_1st)[2:]), 'bytes', 'hex', 'sha256')
+    sha_2nd = hash_256(hexstr2byte(hex(sha_1st)[2:]), 'bytes', 'hex', 'sha256')
     print(f"dig_sha2nd: {hex(sha_2nd)}")
-    checksum = bytes.fromhex(hex(sha_2nd)[2:10])
+    checksum = hexstr2byte(hex(sha_2nd)[2:10])
     print(f"checksum: {checksum.hex()}")
     final_byte = byte_data + checksum
     encoded1 = base58.b58encode(final_byte)  # bitcoin base58 with checksum
@@ -80,10 +87,16 @@ if __name__ == '__main__':
 
     print(f"address seed: {test_seed}")
     sha256 = hash_256(test_seed, 'str', 'hex', 'sha256')
-    # print(f"private key : {hex(sha256)}")
+    print(f"private key type : {type(sha256)}")
 
     btc_key = BitCoinAddr()
     btc_key(sha256)
+
+    #######################
+    priv_add_str = '60cf347dbc59d31c1358c8e5cf5e45b822ab85b79cb32a9f3d98184779a9efc2'
+    priv_int = int(priv_add_str, 16)
+    print
+    btc_key(priv_int)
 
 
 
