@@ -24,9 +24,9 @@ pip install -r requirements.txt
 ## How to run full unit tests
 ```shell
 cd path_of_project
-# usage: python pyECC.py affine|jacobian iteration(int) timing_measure(true/false) verbose(true|false)
+# usage: python pyECC.py aff|jcb iteration(int) timing_measure(true/false) verbose(true|false)
 # example:
-python pyECC.py affine 1 false true
+python pyECC.py aff 1 false true
 
 ```
 

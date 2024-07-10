@@ -1,37 +1,36 @@
 #!/usr/bin/env python3
+# system import
 import sys
-
-#import random
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
+# local import
 from log import log, hex_show
 from log import print_divider as log_div
 from support import hexstr2byte
-
 import modulo
-
 from ecc import ECC
 from support import timing_log
 
-from config import USE_JCB
-
-if USE_JCB:
-    from ecp import ECP_JCB as ECP
-    log_method = 'jacobian' # 'affine'
-else:
-    from ecp import ECP_AFF as ECP
-    log_method = 'hex' # 'dec'
+import config
+from ecp import ECP_AFF, ECP_JCB
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
 SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 
+curv_list =[SECP256K1, SECP256R1, SM2_CV_ID, SM2_TV_ID]
+cord_list=['aff', 'jcb']
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
-    def __init__(self, curve_id):
+    def __init__(self, curve_id, cord_fmt:str='aff'):
+        assert curve_id in curv_list, f"Un-support curve id {curve_id}!"
+        assert cord_fmt in cord_list, f"Un-support curve cordnate format {cord_fmt}!"
+
+        self.cord = cord_fmt
+
         if (curve_id == SECP256K1): # openssl curve_id for secp256k1
             self.a  = 0
             self.b  = 7
@@ -86,13 +85,17 @@ class ECC_Curve ():
 
         else:
             assert False, f"Un-support curve id {curve_id}!"
-        if USE_JCB:
-            self.G  = ECP( (self.Gx, self.Gy, 1), self.p )
-        else:
-            self.G  = ECP( (self.Gx, self.Gy), self.p )
-        
-        self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name, USE_JCB)
 
+        if self.cord == 'jcb':
+
+            self.G  = ECP_JCB( (self.Gx, self.Gy, 1), self.p )
+            self.use_jcb = True
+
+        else:
+            self.G  = ECP_AFF( (self.Gx, self.Gy), self.p )
+            self.use_jcb = False
+        
+        self.curve = ECC(self.a, self.b, self.n, self.p, self.G, curve_id, self.name, self.use_jcb)
         
     
     def PubKey_Gen(self, k:int, verb: bool = False):
@@ -102,9 +105,12 @@ class ECC_Curve ():
         if (verb):
             log('d', f"given privkey = 0x%064x" %(k) )
             log('d', "Generated Pubkey:" )
-            Pubkey.print_point(log_method)
+            Pubkey.print_point(self.cord)
         
         return Pubkey
+    
+
+    ######### todo: inherit from ECC_Curve should be a better idea.
 
     def NIST_Sig_Gen(self, priv_key, randk, sh256_dig, formt:str, verb: bool):
         ''' Elliptic Curve Digital Signature Algorithm (ECDSA)
@@ -126,7 +132,7 @@ class ECC_Curve ():
         s  = 0
         while not rx and not s:
             R  = self.PubKey_Gen(randk, verb)
-            if USE_JCB:
+            if self.use_jcb:
                 rx = R.get_x()
                 pub_x = pub_key.get_x()
                 pub_y = pub_key.get_y()
@@ -161,13 +167,13 @@ class ECC_Curve ():
 
         u1G = self.curve.Point_Mult(u1, self.G, 0)
 
-        if USE_JCB:
-            u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y, 1), self.p), 0)
+        if self.use_jcb:
+            u2P = self.curve.Point_Mult(u2, ECP_JCB((pub_x, pub_y, 1), self.p), 0)
         else:
-            u2P = self.curve.Point_Mult(u2, ECP((pub_x, pub_y), self.p), 0)
+            u2P = self.curve.Point_Mult(u2, ECP_AFF((pub_x, pub_y), self.p), 0)
 
         R = self.curve.Point_Add_General(u1G, u2P)
-        if USE_JCB:
+        if self.use_jcb:
             ret = ( r  == (R.get_x() % self.n) ) 
         else: 
             ret = ( r  == (R.x_ % self.n) )
@@ -192,7 +198,7 @@ class ECC_Curve ():
 
         Pub = self.curve.Point_Mult(da, self.G, 0)
 
-        if USE_JCB:
+        if self.use_jcb:
             pub_x, pub_y = Pub.get_x(), Pub.get_y() 
         else:
             pub_x, pub_y = Pub.x_, Pub.y_
@@ -208,7 +214,7 @@ class ECC_Curve ():
                     k = randk
 
                 kG = self.curve.Point_Mult(k, self.G, 0)
-                if USE_JCB:
+                if self.use_jcb:
                     r = (e + kG.get_x()) % self.n
                 else:
                     r = (e + kG.x_) % self.n
@@ -225,10 +231,10 @@ class ECC_Curve ():
         assert self.family != "NIST", f"this config is NOT for SM2"
 
         self.SigBody_Validate(r, s, e, p_x, p_y)
-        if USE_JCB:
-            P = ECP((p_x, p_y, 1), self.p)
+        if self.use_jcb:
+            P = ECP_JCB((p_x, p_y, 1), self.p)
         else:
-            P = ECP((p_x, p_y), self.p)
+            P = ECP_AFF((p_x, p_y), self.p)
 
         if not  self.curve.ECP_on_curve(P):
             print ("provided pubkey is not on curve")
@@ -247,7 +253,7 @@ class ECC_Curve ():
         tP = self.curve.Point_Mult(t, P, 0)
 
         R = self.curve.Point_Add_General (sG, tP)
-        if USE_JCB:
+        if self.use_jcb:
             rv = (e + R.get_x()) % self.n
         else:
             rv = (e + R.x_) % self.n
@@ -263,18 +269,18 @@ class ECC_Curve ():
 
     ###############################################
 
-    def ECDH (self, self_priv_key, counter_part_PubKey: ECP):
-        assert self.curve.ECP_on_curve(counter_part_PubKey) , "Provided Pubkey is not on curve!"
+    def ECDH (self, self_priv_key, counterPartPubKey):
+        assert self.curve.ECP_on_curve(counterPartPubKey) , "Provided Pubkey is not on curve!"
         assert not self_priv_key  > self.n , "Provided private key > curve n!"
 
-        Q = self.curve.Point_Mult(self_priv_key, counter_part_PubKey, 0)
+        Q = self.curve.Point_Mult(self_priv_key, counterPartPubKey, 0)
         return Q
 
 
     ###############################################
 
 
-    def NIST_Encryption(self, Msg:str, Pub:ECP ):
+    def NIST_Encryption(self, Msg:str, Pub ):
         '''not yet done, TBD
         Elliptic Curve Integrated Encryption Scheme (ECIES)
         '''
@@ -341,9 +347,9 @@ class ECC_Curve ():
             hex_show('Msg Hex: ', M_Byte.hex())
             log('d', f"given k_rand = 0x%064x" %(k) )
             log('d', "Generated Point C1:" )
-            C1.print_point(log_method)
+            C1.print_point(self.cord )
             log('d', "Generated Point kPb:" )
-            kPb.print_point(log_method)
+            kPb.print_point(self.cord )
             # print(f"x2 ∥ M ∥ y2 hex byte = {Z_bytes}")
             # hex_show(f"x2 ∥ M ∥ y2 hex byte = ", Z_bytes.hex())
             hex_show(f"Z_kdf type {type(Z_kdf)}", Z_kdf)
@@ -372,10 +378,10 @@ class ECC_Curve ():
         C1_x = C[2 : 2*(key_byte_len)+2]
         C1_y = C[2*key_byte_len+2 : 4*key_byte_len+2]
 
-        if USE_JCB:
-            C1 = ECP ((int(C1_x,16), int(C1_y,16), 1), self.p)
+        if self.use_jcb:
+            C1 = ECP_JCB ((int(C1_x,16), int(C1_y,16), 1), self.p)
         else:
-            C1 = ECP ((int(C1_x,16), int(C1_y,16)), self.p)
+            C1 = ECP_AFF ((int(C1_x,16), int(C1_y,16)), self.p)
 
         if not self.curve.ECP_on_curve(C1):
             assert False, f"recovered C1 point is not on curve"
@@ -417,9 +423,9 @@ class ECC_Curve ():
             hex_show(f"C3", C3)
             hex_show(f"C1, length = {len(C1_x)}", C1_x)
             hex_show(f"C2, length = {len(C1_y)}", C1_y)
-            C1.print_point(log_method)
+            C1.print_point( self.cord )
             log('d', "Generated Point dC1:" )
-            dC1.print_point(log_method)
+            dC1.print_point( self.cord )
             hex_show(f"t, type {type(t)} ", t.bytes.hex())
             hex_show(f"C2, type {type(C2)} ", C2)
             hex_show(f"M_ type {type(M_str)} ", M_str)
@@ -464,11 +470,6 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
             r,s,z,x,y = curve_ins.NIST_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
             if curve_ins.NIST_Sig_Verify(r,s,z,x,y):
                 test_pass+=1
-
-        # pub_key  = curve_ins.PubKey_Gen(priv_key, verb=False)
-        # P = (x,y)
-        # if not pub_key.is_equal(ECP(P, curve_ins.p)):
-        #     log('w', "Pubkey is different!")
         
         i+=1
     
@@ -519,46 +520,46 @@ def ECDH_unit_test(curve_id, test_round):
 CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
 
 @timing_log
-def ECC_unit_test (curve_id:int, format = log_method):
+def ECC_unit_test (curve_id:int, cord_format = 'aff'):
     '''unit test for Point_Add Point_Double
        result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
     '''
     assert curve_id in CURVE_LIST, log('e', f"priovided curve_id ={curve_id} is not supported!")
     
-    curve_ins = ECC_Curve(curve_id)
+    curve_ins = ECC_Curve(curve_id, cord_format)
     #unit test: Point Double
     log('m', "Point Double unit test: dG = G+G")
     dG = curve_ins.curve.Point_Dbl(curve_ins.G)
-    dG.print_point(format)
+    dG.print_point(cord_format)
     log_div('line',1)
 
     #unit test: Point Add: 
     log('m', "Point Add unit test: tG = dG+G")
     tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
-    tG.print_point(format)
+    tG.print_point(cord_format)
     log_div('line',1)
 
     #unit test: Point Add:
     log('m',"Point Add unit test: Unit(0,0) = tG+tGn")
     tGn = tG.neg_point()
     U = curve_ins.curve.Point_Add(tG, tGn)
-    U.print_point(format)
+    U.print_point(cord_format)
     log_div('line',1)
 
     #unit test: Point Add General: 
     log('m', "Point Add General unit test 0: dG = G + G")
     dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
-    dG.print_point(format)
+    dG.print_point(cord_format)
     log('m', "Point Add General unit test 1: tG = dG + G")
     tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
-    tG.print_point(format)
+    tG.print_point(cord_format)
     log('m', "Point Add General unit test 2: tG = tG + Uint")
     tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.curve.UNIT)
-    tG_plus_I.print_point(format)
+    tG_plus_I.print_point(cord_format)
     log('m', "Point Add General unit test 3: Unit = tG + tGn")
     tGn = tG.neg_point()
     tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
-    tG_plus_tGn.print_point(format)
+    tG_plus_tGn.print_point(cord_format)
     log_div('line',1)
 
     #unit test: Point Multiply:
@@ -566,12 +567,12 @@ def ECC_unit_test (curve_id:int, format = log_method):
     method = 0
     log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
-    kG.print_point(format)
+    kG.print_point(cord_format)
 
     method = 1
     log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
     kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
-    kG.print_point(format)
+    kG.print_point(cord_format)
     log_div('line',1)
 
     k = rand.randint(1, curve_ins.n-1 )
@@ -579,10 +580,10 @@ def ECC_unit_test (curve_id:int, format = log_method):
     log('d', f"k = 0x%064x" %(k) )
     log('d', f"k = 0d%d" %(k) )
     kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
-    kG0.print_point(format)
+    kG0.print_point(cord_format)
 
     kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
-    kG1.print_point(format)
+    kG1.print_point(cord_format)
     log_div('line',1)
 
 #####
@@ -598,7 +599,7 @@ def Curve_unit_test (curve_id):
     log_div('line', 1)
 
 @timing_log
-def Point_Addition_HE_test (curve_id, test_round):
+def Point_Addition_HE_test (curve_id, test_round, cord_format:str='aff'):
     '''Point Add homomorphic encryption test '''
     assert curve_id in CURVE_LIST, log('i', f"priovided curve_id = {curve_id} is not supported!")
     log('m', f"Point Add homomorphic encryption test, plan to run {test_round} rounds")
@@ -629,8 +630,8 @@ def Point_Addition_HE_test (curve_id, test_round):
             test_pass +=1
         else:
             log('e', f"Test round %d of %d fail" %(i, test_round))
-            kG_0.print_point(log_method)
-            kG_1.print_point(log_method)
+            kG_0.print_point(cord_format)
+            kG_1.print_point(cord_format)
 
         i+=1
     log('m', f"Total test round %d, %d pass" %(test_round, test_pass))
@@ -711,47 +712,36 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = 
 
         log('m', f"total run {test_rounds}, pass {test_pass} rounds")
 
-
-    
-
 ################################################
 ## main ##
 if __name__ == '__main__':
     if len(sys.argv) != 5:
-        print(f"usage: python {sys.argv[0]} affine|jacobian iteration(int) timing_measure(bool) verbose(bool)")
+        print(f"usage: python {sys.argv[0]} aff|jcb iteration(int) timing_measure(bool) verbose(bool)")
         assert False, f"only accept 5 arguments. you input {len(sys.argv)} args!"
     
-    assert sys.argv[1] in ['affine','jacobian'], f'need 5 arguments. you input {len(sys.argv)} args!'
+    assert sys.argv[1] in cord_list, f'arg1 need to be aff or jcb!'
     cord_formt = sys.argv[1]
 
     try:
         iter = int(sys.argv[2])  # Attempt to convert the string to an integer
     except ValueError:
-        print(f"Input is not a valid integer string {sys.argv[2]}")
+        print(f"arg2 is not a valid integer string {sys.argv[2]}")
 
-    assert sys.argv[3] in ['true','false'], f'arg3 needs true or false, you input f{sys.argv[3] }!'
-    timing_measure = sys.argv[3]
-    assert sys.argv[4] in ['true','false'], f'arg4 needs true or false, you input f{sys.argv[3] }!'
-    verbose = sys.argv[4]
+    assert sys.argv[3] in ['true','false'], f'arg3 need to be true or false, you input f{sys.argv[3] }!'
+    arg3 = sys.argv[3]
+    assert sys.argv[4] in ['true','false'], f'arg4 need to be true or false, you input f{sys.argv[3] }!'
+    arg4 = sys.argv[4]
     
     log('m', "For check deatil, enable LOG_I/LOG_D option in config.py, and compare the result with online tools : http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html")
 
-    # from config import USE_JCB
-    import config
-    config.setup(cord_formt, timing_measure, verbose)
+    timing_measure = True if arg3 == 'true' else False
+    verbose        = True if arg4 == 'true' else False
 
-    if cord_formt == 'jacobian':
-        from ecp import ECP_JCB as ECP
-        log_method = 'jacobian'
-        USE_JCB = True
-    else:
-        from ecp import ECP_AFF as ECP
-        log_method = 'affine'
-        USE_JCB = False
- 
+    # config.setup(cord_formt, timing_measure, verbose, 'pyECC overide')
+    print (f"give {cord_formt}")
     for cid in CURVE_LIST: # iterate all curves
         # ecc library test
-        ECC_unit_test(cid)
+        ECC_unit_test(cid, cord_formt)
         log_div('double', 1)
 
         # EC Curve test
@@ -759,7 +749,7 @@ if __name__ == '__main__':
         log_div('double', 1)
 
         # EC Point_Addition_HE test
-        Point_Addition_HE_test(cid, iter)
+        Point_Addition_HE_test(cid, iter, cord_formt)
 
         # signature gen/ verify test
         Sig_Verify_unit_test(cid, iter)

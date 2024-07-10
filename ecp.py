@@ -7,6 +7,26 @@ from support import debug_control
 
 ###################################################
 
+def log_point(log_msg: str, data:int, data_format:str='hex'):
+    if data_format == 'hex':
+        log('d', f"{log_msg}: {hex( data )}" )
+    elif data_format == 'dec':
+        log('d', f"{log_msg}: { data }" )
+    else:
+        log('w', f"[log_point]: unkown format signature {data_format}")
+
+def print_aff_point(x:int, y:int, data_format):
+    log_point("Point.x(affine)", x, data_format)
+    log_point("Point.y(affine)", y, data_format)
+    print ("\n")
+
+
+def print_jcb_point(X:int, Y:int, Z:int, data_format):
+    log_point("Point.X(Jacob)", X, data_format)
+    log_point("Point.Y(Jacob)", Y, data_format)
+    log_point("Point.Z(Jacob)", Z, data_format)
+    print ("\n")
+
 class ECP_AFF:
     ''' EC point class, affine coordinate'''
     def __init__(self, P, p:int):
@@ -39,17 +59,11 @@ class ECP_AFF:
         return ECP_AFF(ret, self.p)
 
     # @debug_control
-    def print_point(self, format:str = 'hex'):
-        if format == 'hex':
-            log('d', f"Point.x(affine): {hex( self.x_ )}" )
-            log('d', f"Point.y(affine): {hex( self.y_ )}" )
-        elif format == 'dec':
-            log('d', f"Point.x(affine): {self.x_ }") 
-            log('d', f"Point.y(affine): {self.y_ }")
-        else:
-            log('w', f"unkown format signature {format}")
+    def print_point(self, cord_format='aff', data_format:str = 'hex'):
+        # log_point("Point.x(affine)", self.x_, data_format)
+        # log_point("Point.y(affine)", self.y_, data_format)
+        print_aff_point(self.x_, self.y_, data_format)
 
-    
     def hex_str(self, format='xy', compress = False):
         if   format == 'xy':
             ret = "{:064x}".format(self.x_) + "{:064x}".format(self.y_)
@@ -123,30 +137,32 @@ class ECP_JCB():
         return ECP_JCB( (self.X, (self.p - self.Y) % self.p, self.Z), self.p)
 
     # @debug_control
-    def print_point(self, format='affine'): 
-        if self.is_Unit_Point():
-            print("this is an Unit Point!")
+    def print_point(self, cord_format='aff', data_format='hex'): 
+        # if self.is_Unit_Point():
+        #     print("this is an Unit Point!")
 
-        if (format == 'affine') :
+        # if (cord_format == 'aff') :
+        #     x_a = self.get_x()
+        #     y_a = self.get_y()
+        #     log('d', f"Point.x(affine): {hex( x_a )}" )
+        #     log('d', f"Point.y(affine): {hex( y_a )}" )
+
+        # elif (cord_format == 'jcb'):
+        #     log('d', f"Point.X(Jacob):  {hex( self.X )}" )
+        #     log('d', f"Point.Y(Jacob):  {hex( self.Y )}" )
+        #     log('d', f"Point.Z(Jacob):  {hex( self.Z )}" )
+        
+        # else:
+        #     log('w', f"unkown format signature {cord_format}")
+        if (cord_format == 'aff') :
             x_a = self.get_x()
             y_a = self.get_y()
-            log('d', f"Point.x(affine): {hex( x_a )}" )
-            log('d', f"Point.y(affine): {hex( y_a )}" )
-
-            # return ECP_AFF ( (x_a, y_a) , self.p)
-
-        elif (format == 'jacobian'):
-            # print("Point.X(Jacob):  ", hex( self.X ) )
-            # print("Point.Y(Jacob):  ", hex( self.Y ) )
-            # print("Point.Z(Jacob):  ", hex( self.Z ) )
-            log('d', f"Point.X(Jacob):  {hex( self.X )}" )
-            log('d', f"Point.Y(Jacob):  {hex( self.Y )}" )
-            log('d', f"Point.Z(Jacob):  {hex( self.Z )}" )
-        
-            # return ECP_JCB ((self.X , self.Y , self.Z), self.p)
+            print_aff_point(x_a, y_a, data_format)
+        elif (cord_format == 'jcb'):
+            print_jcb_point(self.X, self.Y, self.Z, data_format)
         else:
-            log('w', f"unkown format signature {format}")
-        print ("\n")
+            log('w', f"unkown format signature {cord_format}")
+
 
     def hex_str(self, format='xy', compress = False):
         if   format == 'xy':

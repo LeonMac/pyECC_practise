@@ -15,7 +15,7 @@ def py_version_good():
     return (ver[0] == 3 and ver[1] > 7)
 
 
-def setup(jcb_or_affine: str = 'affine', timing_measure: bool = True, verbose: bool = False):
+def setup(jcb_or_affine: str = 'affine', timing_measure: bool = True, verbose: bool = False, msg: str = 'system'):
     global USE_JCB # gobal config for jacobian (True) or affine (False) 
 
     global TIMING_MEASURE # config for Timing test (True) or Not (False) in support.py
@@ -27,6 +27,8 @@ def setup(jcb_or_affine: str = 'affine', timing_measure: bool = True, verbose: b
     TIMING_MEASURE = timing_measure
 
     DEBUG = verbose
+
+    print(f"{msg} config: USE_JCB[{USE_JCB}], TIMING_MEASURE[{TIMING_MEASURE}], DEBUG[{DEBUG}]")
 
 
 setup('affine', True, False)

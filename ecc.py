@@ -5,23 +5,24 @@ rand = SystemRandom()   # cryptographic random byte generator
 
 import modulo
 from log import log
+from ecp import ECP_JCB, ECP_AFF
 
-from config import USE_JCB
+# from config import USE_JCB
 
-if USE_JCB:
-    from ecp import ECP_JCB as ECP
-else:
-    from ecp import ECP_AFF as ECP
+# if USE_JCB:
+#     from ecp import ECP_JCB as ECP
+# else:
+#     from ecp import ECP_AFF as ECP
 
 
 class ECC:
     '''EC curve class'''
-    def __init__(self, a:int, b:int, n:int, p:int, G:ECP, curve_id:int, name:str, jcb:bool = False):
+    def __init__(self, a:int, b:int, n:int, p:int, G, curve_id:int, name:str, jcb:bool = False):
         '''
         a, b, n, p, G: ECC domain parameters
         curve_id: for identify curve (secp256k1/p1, sm2)
         name: str of curve name
-        jcb : bool, ECP is affine(default) or Jacobian
+        jcb : bool, ECP is Affine(default) or Jacobian
         '''
         self.a_ = a
         self.b_ = b
@@ -40,15 +41,15 @@ class ECC:
         assert (self.ECP_on_curve(G) ), "Provided Base Point G is not on curve! "
 
         if self.jcb:
-            self.UNIT = ECP ( (0,0,1), self.p_ )
+            self.UNIT = ECP_JCB ( (0,0,1), self.p_ )
             INIT_MSG = "Jacobian Coordinate"
         else:
-            self.UNIT = ECP ( (0,0), self.p_ )
+            self.UNIT = ECP_AFF ( (0,0), self.p_ )
             INIT_MSG = "Affine Coordinate"
         
         log('i', f"EC Curve: {self.name} init done, we use {INIT_MSG}" )
 
-    def ECP_on_curve(self, P: ECP) -> bool:
+    def ECP_on_curve(self, P) -> bool:
         if self.jcb:
             x = P.get_x()
             y = P.get_y()
@@ -72,7 +73,7 @@ class ECC:
 
         return on_curve
     
-    def Point_Dbl (self, P: ECP) -> ECP:
+    def Point_Dbl (self, P):
         '''calculate R = P + P = 2P'''
         if P.is_Unit_Point():
             return P # doubling the UNIT
@@ -91,7 +92,7 @@ class ECC:
             y  = (M*(S-x)-eY4)		 	 % self.p_
             z  = (2*P.Y*P.Z)			 % self.p_
 
-            return ECP((x,y,z),self.p_)
+            return ECP_JCB((x,y,z),self.p_)
 
         else:           # Affine vesion
             x = P.x_
@@ -106,10 +107,10 @@ class ECC:
             xo = (m**2 - x - x)    % self.p_
             yo = (y + m*(xo - x) ) % self.p_
 
-            Rneg = ECP( (xo, yo), self.p_ )
+            Rneg = ECP_AFF( (xo, yo), self.p_ )
             return Rneg.neg_point()
 
-    def Point_Add (self, P: ECP, Q: ECP) -> ECP:
+    def Point_Add (self, P, Q):
         '''calculate R = P + Q, when P != Q '''
         if Q.is_Unit_Point():
             return P
@@ -143,7 +144,7 @@ class ECC:
             y    = (R*(U1*H2-x)-S1*H3 )     % self.p_
             z    = (H*P.Z*Q.Z)		        % self.p_
 
-            return ECP((x,y,z),self.p_)
+            return ECP_JCB((x,y,z),self.p_)
 
 
         else:           # Affine vesion
@@ -161,12 +162,12 @@ class ECC:
             xo = (m**2 - P.x_ - Q.x_)    % self.p_
             yo = (P.y_ + m*(xo - P.x_) ) % self.p_
 
-            Rneg = ECP( (xo, yo), self.p_ )
+            Rneg = ECP_AFF( (xo, yo), self.p_ )
 
             return Rneg.neg_point()
 
 
-    def Point_Add_General (self, P: ECP, Q: ECP) -> ECP:
+    def Point_Add_General (self, P, Q):
         '''calculate R = P + Q, for whatever P and Q (acceptable for P==Q) '''
         log_coordinate = 'jacobian' if (self.jcb) else 'affine' 
         if Q.is_Unit_Point():
@@ -205,7 +206,7 @@ class ECC:
             y    = (R*(U1*H2-x)-S1*H3 )     % self.p_
             z    = (H*P.Z*Q.Z)		        % self.p_
 
-            return ECP((x,y,z),self.p_)
+            return ECP_JCB((x,y,z),self.p_)
 
         else:
             if P.is_equal(Q): # P == Q
@@ -233,11 +234,11 @@ class ECC:
             if yo < 0:
                 yo += self.p_
 
-            Rneg = ECP( (xo, yo) , self.p_)
+            Rneg = ECP_AFF( (xo, yo) , self.p_)
 
             return Rneg.neg_point()
         
-    def Point_Mult(self, k:int, Pin: ECP, method = 1) -> ECP:
+    def Point_Mult(self, k:int, Pin, method = 1):
         ''' Point multiply by scalar k, 
             method == 0, using seperate point double and point add
             method == 1, using general point double and point add 
