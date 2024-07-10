@@ -12,21 +12,26 @@ import modulo
 from ecc import ECC
 from support import timing_log
 
-import config
+# import config
 from ecp import ECP_AFF, ECP_JCB
 
-SECP256K1 = 714 # openssl curve_id for secp256k1
-SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
-SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
-SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 
-curv_list =[SECP256K1, SECP256R1, SM2_CV_ID, SM2_TV_ID]
+global SECP256K1;  SECP256K1= 714 # openssl curve_id for secp256k1
+global SECP256R1;  SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
+global SM2_CV_ID;  SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
+global SM2_TV_ID;  SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
+
+global timing_measure; timing_measure = False
+
+# CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
+
+CURVE_LIST =[SECP256K1, SECP256R1, SM2_CV_ID, SM2_TV_ID]
 cord_list=['aff', 'jcb']
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
     def __init__(self, curve_id, cord_fmt:str='aff'):
-        assert curve_id in curv_list, f"Un-support curve id {curve_id}!"
+        assert curve_id in CURVE_LIST, f"Un-support curve id {curve_id}!"
         assert cord_fmt in cord_list, f"Un-support curve cordnate format {cord_fmt}!"
 
         self.cord = cord_fmt
@@ -149,11 +154,11 @@ class ECC_Curve ():
         return (rx, s, z, pub_x, pub_y)
 
     def SigBody_Validate(self, r, s, z, x, y):
-        assert r < self.n , "Provided sig.s >= curve n!"
-        assert s < self.n , "Provided sig.r >= curve n!"
-        assert z < self.n , "Provided sig.z >= curve n!"
-        assert x < self.p , "Provided pub.x >= curve p!"
-        assert y < self.p , "Provided pub.y >= curve p!"
+        assert r < self.n , f"Provided sig.s {s} >= curve n {self.n}"
+        assert s < self.n , f"Provided sig.r {r} >= curve n {self.n}"
+        assert z < self.n , f"Provided sig.z {z} >= curve n {self.n}"
+        assert x < self.p , f"Provided pub.x {x} >= curve p {self.p}"
+        assert y < self.p , f"Provided pub.y {y} >= curve p {self.p}"
 
     def NIST_Sig_Verify(self, r, s, z, pub_x, pub_y):
         assert self.family != "SM2", f"this config is NOT for NIST"
@@ -259,10 +264,10 @@ class ECC_Curve ():
             rv = (e + R.x_) % self.n
 
         if rv == r:
-            print("signature verify Pass")
+            log('d', f"SM2_Sig_Verify Pass")
             return True
         else:
-            print("signature verify Fail")
+            log('d', f"SM2_Sig_Verify Fail")
             return False
 
 
@@ -441,277 +446,6 @@ class ECC_Curve ():
             return None
     
 
-###########################################################
-@timing_log
-def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
-    ''' signature generate and verify test '''
-    from hash_lib import hash_256 as sha256
-    log_div('line', 1)
-    log('m', f"Signature generate+signature verify test, plan to run {test_round} rounds")
-    curve_ins = ECC_Curve(curve_id)
-
-    i = 0
-    test_pass = 0
-    # msg = "This is a masterpiece from Tiger.Tang"
-    # dig = sha256(msg)
-
-    while i < test_round: 
-        msg = str(rand.randint(1, curve_ins.n-1 ))
-        dig = sha256(msg)
-
-        priv_key = rand.randint(1, curve_ins.n-1 )
-        randk    = rand.randint(1, curve_ins.n-1 )
-
-        if curve_id == SM2_CV_ID or curve_id == SM2_TV_ID:
-            r,s,z,x,y = curve_ins.SM2_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
-            if curve_ins.SM2_Sig_Verify(r,s,z,x,y):
-                test_pass+=1
-        else:
-            r,s,z,x,y = curve_ins.NIST_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
-            if curve_ins.NIST_Sig_Verify(r,s,z,x,y):
-                test_pass+=1
-        
-        i+=1
-    
-    log('m', f"Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
-    log_div('line', 1)
-
-    return test_pass
-
-@timing_log
-def ECDH_unit_test(curve_id, test_round):
-    ''' ECDH test '''
-    log('m', f"ECDH test, plan to run {test_round} rounds")
-    curve_ins = ECC_Curve(curve_id)
-
-    i = 0
-    test_pass = 0
-    while i < test_round:
-        # Alice private key and Pubkey
-        da = rand.randint(1, curve_ins.n-1 )
-        Pa = curve_ins.PubKey_Gen(da, False)
-
-        # Bob private key and Pubkey
-        db = rand.randint(1, curve_ins.n-1 )
-        Pb = curve_ins.PubKey_Gen(db, False)
-
-        # Alice Pubkey sent to Bob, Bob calculate Share secret
-        S_bob = curve_ins.ECDH(db, Pa)
-
-        # Bob Pubkey sent to Alice, Alice calculate Share secret
-        S_alice = curve_ins.ECDH(da, Pb)
-
-        if S_bob.is_equal(S_alice):
-            test_pass += 1
-
-        i += 1
-    
-    log('m', f"EDCH test round %d, %d pass" %(test_round, test_pass))
-    log_div('line', 1)
-
-    return test_pass
-   
-
-
-####################################################
-## ECC unit test
-## this website can generate test vector and comapre with our result
-## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
-CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
-
-@timing_log
-def ECC_unit_test (curve_id:int, cord_format = 'aff'):
-    '''unit test for Point_Add Point_Double
-       result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
-    '''
-    assert curve_id in CURVE_LIST, log('e', f"priovided curve_id ={curve_id} is not supported!")
-    
-    curve_ins = ECC_Curve(curve_id, cord_format)
-    #unit test: Point Double
-    log('m', "Point Double unit test: dG = G+G")
-    dG = curve_ins.curve.Point_Dbl(curve_ins.G)
-    dG.print_point(cord_format)
-    log_div('line',1)
-
-    #unit test: Point Add: 
-    log('m', "Point Add unit test: tG = dG+G")
-    tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
-    tG.print_point(cord_format)
-    log_div('line',1)
-
-    #unit test: Point Add:
-    log('m',"Point Add unit test: Unit(0,0) = tG+tGn")
-    tGn = tG.neg_point()
-    U = curve_ins.curve.Point_Add(tG, tGn)
-    U.print_point(cord_format)
-    log_div('line',1)
-
-    #unit test: Point Add General: 
-    log('m', "Point Add General unit test 0: dG = G + G")
-    dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
-    dG.print_point(cord_format)
-    log('m', "Point Add General unit test 1: tG = dG + G")
-    tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
-    tG.print_point(cord_format)
-    log('m', "Point Add General unit test 2: tG = tG + Uint")
-    tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.curve.UNIT)
-    tG_plus_I.print_point(cord_format)
-    log('m', "Point Add General unit test 3: Unit = tG + tGn")
-    tGn = tG.neg_point()
-    tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
-    tG_plus_tGn.print_point(cord_format)
-    log_div('line',1)
-
-    #unit test: Point Multiply:
-    k = 111
-    method = 0
-    log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
-    kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
-    kG.print_point(cord_format)
-
-    method = 1
-    log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
-    kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
-    kG.print_point(cord_format)
-    log_div('line',1)
-
-    k = rand.randint(1, curve_ins.n-1 )
-    log('m', "Point Mult unit test 2: kG, k random ")
-    log('d', f"k = 0x%064x" %(k) )
-    log('d', f"k = 0d%d" %(k) )
-    kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
-    kG0.print_point(cord_format)
-
-    kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
-    kG1.print_point(cord_format)
-    log_div('line',1)
-
-#####
-def Curve_unit_test (curve_id):
-    '''do unit test for curve unit test '''
-    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
-    curve_ins = ECC_Curve(curve_id)
-
-    k = rand.randint(1, curve_ins.n-1 )
-    log('m', "Pubkey gen unit test:")
-    log('d', "PrivKey = 0d%d" %(k) )
-    Pubkey = curve_ins.PubKey_Gen(k, True)
-    log_div('line', 1)
-
-@timing_log
-def Point_Addition_HE_test (curve_id, test_round, cord_format:str='aff'):
-    '''Point Add homomorphic encryption test '''
-    assert curve_id in CURVE_LIST, log('i', f"priovided curve_id = {curve_id} is not supported!")
-    log('m', f"Point Add homomorphic encryption test, plan to run {test_round} rounds")
-    curve_ins = ECC_Curve(curve_id)
-
-    i = 0
-    test_pass = 0
-    while i < test_round:  
-
-        k1 = rand.randint(curve_ins.n -10, curve_ins.n)
-        #k1 = i+1
-        #print ("k1 = 0d%d" %(k1) )
-        k1G = curve_ins.PubKey_Gen(k1, False)
-
-        k2 = rand.randint(curve_ins.n - i*10, curve_ins.n )
-        #k2 = 2*i+3
-
-        #print ("k2 = 0d%d" %(k2) )
-        k2G = curve_ins.PubKey_Gen(k2, False)
-
-        kG_0  = curve_ins.curve.Point_Add_General(k1G, k2G)
-
-        k = (k1 + k2) % curve_ins.n
-
-        kG_1  = curve_ins.PubKey_Gen(k, False)
-
-        if kG_0.is_equal(kG_1) :
-            test_pass +=1
-        else:
-            log('e', f"Test round %d of %d fail" %(i, test_round))
-            kG_0.print_point(cord_format)
-            kG_1.print_point(cord_format)
-
-        i+=1
-    log('m', f"Total test round %d, %d pass" %(test_round, test_pass))
-    log_div('line', 1)
-
-    return test_pass
-   
-def show_signature(msg, r, s, z, Qx, Qy):
-    print(msg)
-    print("r    :  0x%064x" %(r) )
-    print("s    :  0x%064x" %(s) )
-    print("hash :  0x%064x" %(z) )
-    print("Qx   :  0x%064x" %(Qx) )
-    print("Qy   :  0x%064x" %(Qy) )
-    print("")
-
-def SM2_TV_Test():
-    p = 0x5EF55F07DD5D65CD231C4842324694399E4DADC57F15A21E98CC8BC272C7AE13
-    k = 0xB8BAAFCAA92BA3FDAC766683FB7950CEFE0E4A2B4461CA52C1D218E4937EB3D5
-    z = 0x5F77158730334C649ACB4013E81E237085DC63EFBAC7A05011F7109FA69C8993
-
-    curve_ins = ECC_Curve(123)
-    r,s,z,x,y = curve_ins.SM2_Sig_Gen(p, k, z, 'non-compress', False )
-    # P = curve_ins.curve.Point_Mult(p, curve_ins.G, 0)
-
-    # show_signature("",r,s,z,P.x_,P.y_)
-    
-    # curve_ins.SM2_Sig_Verify(r,s,z,P.x_,P.y_)
-    curve_ins.SM2_Sig_Verify(r,s,z,x,y)
-
-@timing_log
-def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = False):
-    
-    cuv = ECC_Curve(cid)
-    if cid == SM2_TV_ID:
-        priv = 0x1649AB77A00637BD5E2EFE283FBF353534AA7F7CB89463F208DDBC2920BB0DA0
-        k    = 0x4C62EEFD6ECFC2B95B92FD6C3D9575148AFA17425546D49018E5388D49DD7B4F
-        log('i', f"this is SM2 encryption+Decryption test by using SM2 test vector, format '{ver}': ")
-        M = 'encryption standard'
-        Pb = cuv.PubKey_Gen(priv, verb)
-        C  = cuv.SM2_Encryption(M, Pb, k, ver, verb)
-
-        if verb: log_div("double",1)
-
-        M_ = cuv.SM2_Decryption(C, priv, ver, verb)
-
-        if verb: log_div("double",1)
-        
-        log('i', f"Input plain text for encryption: {M}")
-        log('i', f"Encrypted result: {C}")
-        log('i', f"Decrypted plain text: {M_}")
-
-        if M == M_:
-            log('m', "test passed!")
-        else:
-            log('e', "test failed!")
-
-    elif cid == SM2_CV_ID:
-        test_pass = 0
-        sm2_n = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
-        log('i', f"this is SM2 Encryption+Decryption general test, will run {test_rounds} rounds, format '{ver}': ")
-        for i in range(test_rounds):
-
-            m_rnd = rand.randint( 1, pow(2,512) )
-            M = hex(m_rnd)[2:]
-            #log('i', f"Randomly gen message (byte) length = {len(M)}")
-            priv  = rand.randint( 1, sm2_n-1 )
-
-            Pb = cuv.PubKey_Gen(priv, verb)
-            C  = cuv.SM2_Encryption(M, Pb, None, ver, verb)
-            #log_div("double",1)
-            M_ = cuv.SM2_Decryption(C, priv, ver, verb)
-            if M == M_:
-                test_pass = test_pass + 1
-                log('m', f"test round {i+1}/{test_rounds} passed!")
-            else:
-                log('e', f"test round {i+1}/{test_rounds} failed!")
-
-        log('m', f"total run {test_rounds}, pass {test_pass} rounds")
-
 ################################################
 ## main ##
 if __name__ == '__main__':
@@ -738,7 +472,278 @@ if __name__ == '__main__':
     verbose        = True if arg4 == 'true' else False
 
     # config.setup(cord_formt, timing_measure, verbose, 'pyECC overide')
-    print (f"give {cord_formt}")
+    # print(f"user input timing_measure: {timing_measure}")
+
+    @timing_log(measure=timing_measure)
+    def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
+        ''' signature generate and verify test '''
+        from hash_lib import hash_256 as sha256
+        log_div('line', 1)
+        log('m', f"Signature generate+signature verify test, plan to run {test_round} rounds")
+        curve_ins = ECC_Curve(curve_id)
+
+        i = 0
+        test_pass = 0
+        # msg = "This is a masterpiece from Tiger.Tang"
+        # dig = sha256(msg)
+
+        while i < test_round: 
+            msg = str(rand.randint(1, curve_ins.n-1 ))
+            dig = sha256(msg)
+
+            priv_key = rand.randint(1, curve_ins.n-1 )
+            randk    = rand.randint(1, curve_ins.n-1 )
+
+            if curve_id == SM2_CV_ID or curve_id == SM2_TV_ID:
+                r,s,z,x,y = curve_ins.SM2_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+                if curve_ins.SM2_Sig_Verify(r,s,z,x,y):
+                    test_pass+=1
+            else:
+                r,s,z,x,y = curve_ins.NIST_Sig_Gen(priv_key, randk, dig, 'non-compress', False )
+                if curve_ins.NIST_Sig_Verify(r,s,z,x,y):
+                    test_pass+=1
+            
+            i+=1
+        
+        log('m', f"Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
+        log_div('line', 1)
+
+        return test_pass
+
+    @timing_log(measure=timing_measure)
+    def ECDH_unit_test(curve_id, test_round):
+        ''' ECDH test '''
+        log('m', f"ECDH test, plan to run {test_round} rounds")
+        curve_ins = ECC_Curve(curve_id)
+
+        i = 0
+        test_pass = 0
+        while i < test_round:
+            # Alice private key and Pubkey
+            da = rand.randint(1, curve_ins.n-1 )
+            Pa = curve_ins.PubKey_Gen(da, False)
+
+            # Bob private key and Pubkey
+            db = rand.randint(1, curve_ins.n-1 )
+            Pb = curve_ins.PubKey_Gen(db, False)
+
+            # Alice Pubkey sent to Bob, Bob calculate Share secret
+            S_bob = curve_ins.ECDH(db, Pa)
+
+            # Bob Pubkey sent to Alice, Alice calculate Share secret
+            S_alice = curve_ins.ECDH(da, Pb)
+
+            if S_bob.is_equal(S_alice):
+                test_pass += 1
+
+            i += 1
+        
+        log('m', f"EDCH test round %d, %d pass" %(test_round, test_pass))
+        log_div('line', 1)
+
+        return test_pass
+    
+
+
+    ####################################################
+    ## ECC unit test
+    ## this website can generate test vector and comapre with our result
+    ## http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+
+    @timing_log(measure=timing_measure)
+    def ECC_unit_test (curve_id:int, cord_format = 'aff'):
+        '''unit test for Point_Add Point_Double
+        result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
+        '''
+        assert curve_id in CURVE_LIST, log('e', f"priovided curve_id ={curve_id} is not supported!")
+        
+        curve_ins = ECC_Curve(curve_id, cord_format)
+        #unit test: Point Double
+        log('m', "Point Double unit test: dG = G+G")
+        dG = curve_ins.curve.Point_Dbl(curve_ins.G)
+        dG.print_point(cord_format)
+        log_div('line',1)
+
+        #unit test: Point Add: 
+        log('m', "Point Add unit test: tG = dG+G")
+        tG = curve_ins.curve.Point_Add(dG, curve_ins.G)
+        tG.print_point(cord_format)
+        log_div('line',1)
+
+        #unit test: Point Add:
+        log('m',"Point Add unit test: Unit(0,0) = tG+tGn")
+        tGn = tG.neg_point()
+        U = curve_ins.curve.Point_Add(tG, tGn)
+        U.print_point(cord_format)
+        log_div('line',1)
+
+        #unit test: Point Add General: 
+        log('m', "Point Add General unit test 0: dG = G + G")
+        dG = curve_ins.curve.Point_Add_General(curve_ins.G, curve_ins.G)
+        dG.print_point(cord_format)
+        log('m', "Point Add General unit test 1: tG = dG + G")
+        tG = curve_ins.curve.Point_Add_General(dG, curve_ins.G)
+        tG.print_point(cord_format)
+        log('m', "Point Add General unit test 2: tG = tG + Uint")
+        tG_plus_I = curve_ins.curve.Point_Add_General(tG, curve_ins.curve.UNIT)
+        tG_plus_I.print_point(cord_format)
+        log('m', "Point Add General unit test 3: Unit = tG + tGn")
+        tGn = tG.neg_point()
+        tG_plus_tGn = curve_ins.curve.Point_Add_General(tG, tGn)
+        tG_plus_tGn.print_point(cord_format)
+        log_div('line',1)
+
+        #unit test: Point Multiply:
+        k = 111
+        method = 0
+        log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
+        kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
+        kG.print_point(cord_format)
+
+        method = 1
+        log('m', "Point Mult unit test 0: kG, k = %d, method = %d" %(k, method) )
+        kG = curve_ins.curve.Point_Mult(k, curve_ins.G, method)
+        kG.print_point(cord_format)
+        log_div('line',1)
+
+        k = rand.randint(1, curve_ins.n-1 )
+        log('m', "Point Mult unit test 2: kG, k random ")
+        log('d', f"k = 0x%064x" %(k) )
+        log('d', f"k = 0d%d" %(k) )
+        kG0 = curve_ins.curve.Point_Mult(k, curve_ins.G, 0)
+        kG0.print_point(cord_format)
+
+        kG1 = curve_ins.curve.Point_Mult(k, curve_ins.G, 1)
+        kG1.print_point(cord_format)
+        log_div('line',1)
+
+    #####
+    def Curve_unit_test (curve_id):
+        '''do unit test for curve unit test '''
+        assert curve_id in CURVE_LIST, log('i', f"priovided curve_id ={curve_id} is not supported!")
+        curve_ins = ECC_Curve(curve_id)
+
+        k = rand.randint(1, curve_ins.n-1 )
+        log('m', "Pubkey gen unit test:")
+        log('d', "PrivKey = 0d%d" %(k) )
+        Pubkey = curve_ins.PubKey_Gen(k, True)
+        log_div('line', 1)
+
+    @timing_log(measure=timing_measure)
+    def Point_Addition_HE_test (curve_id, test_round, cord_format:str='aff'):
+        '''Point Add homomorphic encryption test '''
+        assert curve_id in CURVE_LIST, log('i', f"priovided curve_id = {curve_id} is not supported!")
+        log('m', f"Point Add homomorphic encryption test, plan to run {test_round} rounds")
+        curve_ins = ECC_Curve(curve_id)
+
+        i = 0
+        test_pass = 0
+        while i < test_round:  
+
+            k1 = rand.randint(curve_ins.n -10, curve_ins.n)
+            #k1 = i+1
+            #print ("k1 = 0d%d" %(k1) )
+            k1G = curve_ins.PubKey_Gen(k1, False)
+
+            k2 = rand.randint(curve_ins.n - i*10, curve_ins.n )
+            #k2 = 2*i+3
+
+            #print ("k2 = 0d%d" %(k2) )
+            k2G = curve_ins.PubKey_Gen(k2, False)
+
+            kG_0  = curve_ins.curve.Point_Add_General(k1G, k2G)
+
+            k = (k1 + k2) % curve_ins.n
+
+            kG_1  = curve_ins.PubKey_Gen(k, False)
+
+            if kG_0.is_equal(kG_1) :
+                test_pass +=1
+            else:
+                log('e', f"Test round %d of %d fail" %(i, test_round))
+                kG_0.print_point(cord_format)
+                kG_1.print_point(cord_format)
+
+            i+=1
+        log('m', f"Total test round %d, %d pass" %(test_round, test_pass))
+        log_div('line', 1)
+
+        return test_pass
+    
+    def show_signature(msg, r, s, z, Qx, Qy):
+        print(msg)
+        print("r    :  0x%064x" %(r) )
+        print("s    :  0x%064x" %(s) )
+        print("hash :  0x%064x" %(z) )
+        print("Qx   :  0x%064x" %(Qx) )
+        print("Qy   :  0x%064x" %(Qy) )
+        print("")
+
+    def SM2_TV_Test():
+        p = 0x5EF55F07DD5D65CD231C4842324694399E4DADC57F15A21E98CC8BC272C7AE13
+        k = 0xB8BAAFCAA92BA3FDAC766683FB7950CEFE0E4A2B4461CA52C1D218E4937EB3D5
+        z = 0x5F77158730334C649ACB4013E81E237085DC63EFBAC7A05011F7109FA69C8993
+
+        curve_ins = ECC_Curve(123)
+        r,s,z,x,y = curve_ins.SM2_Sig_Gen(p, k, z, 'non-compress', False )
+        # P = curve_ins.curve.Point_Mult(p, curve_ins.G, 0)
+
+        # show_signature("",r,s,z,P.x_,P.y_)
+        
+        # curve_ins.SM2_Sig_Verify(r,s,z,P.x_,P.y_)
+        curve_ins.SM2_Sig_Verify(r,s,z,x,y)
+
+    @timing_log(measure=timing_measure)
+    def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = False):
+        
+        cuv = ECC_Curve(cid)
+        if cid == SM2_TV_ID:
+            priv = 0x1649AB77A00637BD5E2EFE283FBF353534AA7F7CB89463F208DDBC2920BB0DA0
+            k    = 0x4C62EEFD6ECFC2B95B92FD6C3D9575148AFA17425546D49018E5388D49DD7B4F
+            log('i', f"this is SM2 encryption+Decryption test by using SM2 test vector, format '{ver}': ")
+            M = 'encryption standard'
+            Pb = cuv.PubKey_Gen(priv, verb)
+            C  = cuv.SM2_Encryption(M, Pb, k, ver, verb)
+
+            if verb: log_div("double",1)
+
+            M_ = cuv.SM2_Decryption(C, priv, ver, verb)
+
+            if verb: log_div("double",1)
+            
+            log('i', f"Input plain text for encryption: {M}")
+            log('i', f"Encrypted result: {C}")
+            log('i', f"Decrypted plain text: {M_}")
+
+            if M == M_:
+                log('m', "test passed!")
+            else:
+                log('e', "test failed!")
+
+        elif cid == SM2_CV_ID:
+            test_pass = 0
+            sm2_n = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
+            log('i', f"this is SM2 Encryption+Decryption general test, will run {test_rounds} rounds, format '{ver}': ")
+            for i in range(test_rounds):
+
+                m_rnd = rand.randint( 1, pow(2,512) )
+                M = hex(m_rnd)[2:]
+                #log('i', f"Randomly gen message (byte) length = {len(M)}")
+                priv  = rand.randint( 1, sm2_n-1 )
+
+                Pb = cuv.PubKey_Gen(priv, verb)
+                C  = cuv.SM2_Encryption(M, Pb, None, ver, verb)
+                #log_div("double",1)
+                M_ = cuv.SM2_Decryption(C, priv, ver, verb)
+                if M == M_:
+                    test_pass = test_pass + 1
+                    log('m', f"test round {i+1}/{test_rounds} passed!")
+                else:
+                    log('e', f"test round {i+1}/{test_rounds} failed!")
+
+            log('m', f"total run {test_rounds}, pass {test_pass} rounds")
+
+
     for cid in CURVE_LIST: # iterate all curves
         # ecc library test
         ECC_unit_test(cid, cord_formt)

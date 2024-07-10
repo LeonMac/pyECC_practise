@@ -7,13 +7,6 @@ import modulo
 from log import log
 from ecp import ECP_JCB, ECP_AFF
 
-# from config import USE_JCB
-
-# if USE_JCB:
-#     from ecp import ECP_JCB as ECP
-# else:
-#     from ecp import ECP_AFF as ECP
-
 
 class ECC:
     '''EC curve class'''

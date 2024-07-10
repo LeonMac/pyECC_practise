@@ -60,8 +60,6 @@ class ECP_AFF:
 
     # @debug_control
     def print_point(self, cord_format='aff', data_format:str = 'hex'):
-        # log_point("Point.x(affine)", self.x_, data_format)
-        # log_point("Point.y(affine)", self.y_, data_format)
         print_aff_point(self.x_, self.y_, data_format)
 
     def hex_str(self, format='xy', compress = False):
@@ -138,22 +136,6 @@ class ECP_JCB():
 
     # @debug_control
     def print_point(self, cord_format='aff', data_format='hex'): 
-        # if self.is_Unit_Point():
-        #     print("this is an Unit Point!")
-
-        # if (cord_format == 'aff') :
-        #     x_a = self.get_x()
-        #     y_a = self.get_y()
-        #     log('d', f"Point.x(affine): {hex( x_a )}" )
-        #     log('d', f"Point.y(affine): {hex( y_a )}" )
-
-        # elif (cord_format == 'jcb'):
-        #     log('d', f"Point.X(Jacob):  {hex( self.X )}" )
-        #     log('d', f"Point.Y(Jacob):  {hex( self.Y )}" )
-        #     log('d', f"Point.Z(Jacob):  {hex( self.Z )}" )
-        
-        # else:
-        #     log('w', f"unkown format signature {cord_format}")
         if (cord_format == 'aff') :
             x_a = self.get_x()
             y_a = self.get_y()

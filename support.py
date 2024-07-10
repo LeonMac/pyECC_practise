@@ -2,25 +2,50 @@ from log import log
 
 from decimal import Decimal
 from config import TIMING_MEASURE, DEBUG
+import timeit
 
 ## timing decorator
-def timing_log(func):
-    """decoration for timing calculation"""
+def timing_log( measure:bool=False):
+    def decorator(func):
+        """decoration for timing calculation"""
+        if measure:
+            def get_timing(self, *args, **kwargs):
+                _begin = timeit.default_timer()
+                result = func(self, *args, **kwargs)
+                duration = timeit.default_timer() - _begin
+                d = Decimal(str(duration)).quantize(Decimal("0.001"), rounding = "ROUND_HALF_UP")
+                d_str = f"time: {d} "
+                print(f"{func.__name__} took {d_str} seconds\n")
+                return result, d_str
+            
+            return get_timing
 
-    if TIMING_MEASURE:
-        import timeit
-        def get_timing(self, *args, **kwargs):
-            _begin = timeit.default_timer()
-            result = func(self, *args, **kwargs)
-            duration = timeit.default_timer() - _begin
-            d = Decimal(str(duration)).quantize(Decimal("0.001"), rounding = "ROUND_HALF_UP")
-            d_str = f"time: {d} sec"
-            print(f"{func.__name__} takes {d_str} seconds\n")
-            return result, d_str
-        return get_timing
-    
-    else:
-        pass
+        else:
+            return func
+    return decorator
+
+
+# class TimingLogDecorator:
+#     """a timing logging decorator"""
+#     def __init__(self, measure):
+#         self.measure = measure
+
+#     def __call__(self, func):
+#         def wrapper(*args, **kwargs):
+#             if self.measure:
+#                 _begin = timeit.default_timer()
+#                 result = func(self, *args, **kwargs)
+#                 duration = timeit.default_timer() - _begin
+#                 d = Decimal(str(duration)).quantize(Decimal("0.001"), rounding = "ROUND_HALF_UP")
+#                 d_str = f"time: {d} "
+#                 print(f"{func.__name__} took {d_str} seconds\n")
+#                 return result, d_str
+#             else:
+#                 return func(*args, **kwargs)
+            
+#         return wrapper
+
+
 
 ## debug_decorator
 def debug_control(func):

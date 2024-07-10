@@ -31,5 +31,8 @@ def setup(jcb_or_affine: str = 'affine', timing_measure: bool = True, verbose: b
     print(f"{msg} config: USE_JCB[{USE_JCB}], TIMING_MEASURE[{TIMING_MEASURE}], DEBUG[{DEBUG}]")
 
 
-setup('affine', True, False)
+cord_format = 'affine'
+timing_measure = False
+verbose_mode = False
+setup(cord_format, timing_measure, verbose_mode)
 
