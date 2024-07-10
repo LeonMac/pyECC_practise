@@ -190,7 +190,7 @@ class ECC_Curve ():
 
         e = 0
         if (ZaM >= self.n):
-            e = self.n
+            e = ZaM - self.n #need double confirm by checking SM2 spec.
         else: 
             e = ZaM   
         
