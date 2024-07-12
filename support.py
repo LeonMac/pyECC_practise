@@ -4,6 +4,7 @@ from decimal import Decimal
 from config import TIMING_MEASURE, DEBUG
 import timeit
 
+import pdb
 ## timing decorator
 def timing_log( measure:bool=False):
     def decorator(func):
@@ -83,8 +84,10 @@ def hexstr2byte(hex_str:str):
         >>> hexstr2byte('1a2b3c')
         b'\x1a+<'
     """
-    
+    pdb.set_trace()
+    print(f"[hexstr2byte]: type of hex_str {type(hex_str)}")   
     if hex_str[:2] == '0x': 
+
         hex_string = hex_str[2:]
     else:
         hex_string = hex_str
@@ -93,9 +96,9 @@ def hexstr2byte(hex_str:str):
         hex_string = '0' + hex_string
     # Check for non-hex characters
     # if not all(c in HEX_CHR for c in hex_string):
-    for idx, char in enumerate(hex_string):
-        if char not in HEX_CHR:
-            raise NonHexCharErr(f"Input contains non-hex characters:{hex_str}, position[{idx}]: '{char}'")
+    # for idx, char in enumerate(hex_string):
+    #     if char not in HEX_CHR:
+    #         raise NonHexCharErr(f"Input contains non-hex characters:{hex_str}, position[{idx}]: '{char}'")
 
     return bytes.fromhex(hex_string)
 

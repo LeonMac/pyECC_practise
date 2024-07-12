@@ -2,7 +2,6 @@
 # ref https://medium.com/coinmonks/how-to-generate-a-bitcoin-address-step-by-step-9d7fcbf1ad0b
 '''Note this is not good example as it implicitly add \n after for all the string before doing hash!!'''
 test_seed = "this is a group of words that should not be considered random anymore so never use this to generate a private key\n"
-print(f"address seed: {test_seed}")
 
 import sys, os
 import base58
@@ -15,6 +14,8 @@ rand = SystemRandom()
 from hash_lib import hash_256
 from support import hexstr2byte
 import pyECC as E
+
+import pdb
 
 
 class BitCoinAddr():
@@ -39,28 +40,45 @@ class BitCoinAddr():
 
         return Pb.hex_str(format='x', compress=True)
     
-    def Hash(compressed_pub_str:str, address_ver:str='P2PKH'):
-        dig_sha256 = hash_256(hexstr2byte(compressed_pub_str), 'bytes', 'hex', 'sha256')
-        dig_rip160 = hash_256(hexstr2byte(dig_sha256), 'bytes', 'hex', 'ripemd160')
-        # if address_ver == 'P2PKH':
-        #     return f"00{hex(dig_rip160)[2:]}" 
-        # elif address_ver == 'P2WPKH':
-        #     return f"0014{hex(dig_rip160)[2:]}" 
-        # return p2pkh_str
+    def Hashes(self, compressed_pub_key_str:str, address_ver:str='P2PKH'):
+        pdb.set_trace()
+        print(f"in Hash, type= {type(compressed_pub_key_str)}")
+
+        dig_sha256 = hash_256(hexstr2byte(compressed_pub_key_str), 'bytes', 'hex', 'sha256')
+        dig_rip160 = hash_256(hexstr2byte(hex(dig_sha256)), 'bytes', 'hex', 'ripemd160')
+
+        if address_ver == 'P2PKH':
+            return f"00{hex(dig_rip160)[2:]}" 
+        elif address_ver == 'P2WPKH':
+            return f"0014{hex(dig_rip160)[2:]}" 
+
     
+    def GenAddr(self, priv_key:str = None, address_ver:str='P2PKH'):
+        compressed_pub_str = self.GenKeyPair(priv_key)
+        print(f"compressed pubkey: {compressed_pub_str}")
 
 
-    def __call__(self, priv_key = None):
-        compress_pun_key_str = self.GenKeyPair(priv_key)
-        print(f"compressed pubkey: {compress_pun_key_str}")
-        dig_sha256 = hash_256(hexstr2byte(compress_pun_key_str), 'bytes', 'hex', 'sha256')
-        print(f"dig_sha256: {hex(dig_sha256)}")
-        dig_rip160 = hash_256(hexstr2byte(hex(dig_sha256)[2:]), 'bytes', 'hex', 'ripemd160')
-        print(f"dig_rip160: {hex(dig_rip160)}")
-        pk2pkh_str = f"00{hex(dig_rip160)[2:]}" 
-        print(f"P2PKH string: {pk2pkh_str}")
-        pk2pkh_b58 = base58.b58encode_check(hexstr2byte(pk2pkh_str))
-        print(f'final address: {pk2pkh_b58.decode()}')
+
+    # def __call__(self, priv_key = None):
+    #     compressed_pub_str = self.GenKeyPair(priv_key)
+    #     print(f"compressed pubkey: {compressed_pub_str}")
+
+    #     dig_sha256 = hash_256(hexstr2byte(compressed_pub_str), 'bytes', 'hex', 'sha256')
+    #     print(f"dig_sha256: {hex(dig_sha256)}")
+
+    #     dig_rip160 = hash_256(hexstr2byte(hex(dig_sha256)[2:]), 'bytes', 'hex', 'ripemd160')
+    #     print(f"dig_rip160: {hex(dig_rip160)}")
+
+    #     pk2pkh_str = f"00{hex(dig_rip160)[2:]}" 
+    #     print(f"P2PKH string: {pk2pkh_str}")
+
+    #     print('-'*20)
+    #     print(f"compressed pubkey: {compressed_pub_str}, type {type(compressed_pub_str)}")
+    #     pk2pkh_str = self.Hashes(compressed_pub_str)
+    #     pk2pkh_b58 = base58.b58encode_check(hexstr2byte(pk2pkh_str))
+    #     print(f'final address: {pk2pkh_b58.decode()}')
+
+
 
 def base58test(input_str: str = None):
     hex_str = '003a38d44d6a0c8d0bb84e0232cc632b7e48c72e0e' if input_str == None else input_str
@@ -83,20 +101,27 @@ def base58test(input_str: str = None):
 
 if __name__ == '__main__':   
 
-    base58test()
+    # base58test()
 
     print(f"address seed: {test_seed}")
     sha256 = hash_256(test_seed, 'str', 'hex', 'sha256')
-    print(f"private key type : {type(sha256)}")
+    # print(f"private key type : {type(sha256)}")
 
-    btc_key = BitCoinAddr()
-    btc_key(sha256)
+    # btc_key = BitCoinAddr()
+    # btc_key(sha256)
 
     #######################
-    priv_add_str = '60cf347dbc59d31c1358c8e5cf5e45b822ab85b79cb32a9f3d98184779a9efc2'
-    priv_int = int(priv_add_str, 16)
-    print
-    btc_key(priv_int)
+    # priv_add_str = '60cf347dbc59d31c1358c8e5cf5e45b822ab85b79cb32a9f3d98184779a9efc2'
+    # priv_int = int(priv_add_str, 16)
+    # print
+    # btc_key(priv_int)
+    btc_add = BitCoinAddr()
+    compressed_pub_str = btc_add.GenKeyPair(sha256)
+    print(f"compressed pubkey: {compressed_pub_str}")
+    hash_str = btc_add.Hashes(compressed_pub_str, 'P2PKH')
+    print(f"P2PKH string: {hash_str}")
+
+
 
 
 
