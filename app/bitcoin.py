@@ -3,6 +3,8 @@
 ## plan to implement P2PKH, P2WPKH, P2SH
 
 # ref https://medium.com/coinmonks/how-to-generate-a-bitcoin-address-step-by-step-9d7fcbf1ad0b
+DISCLAIM = 'This is purely personal fun, NEVER use it for generating a address for your money transfering'
+
 '''Note this is not good example as it implicitly add \n after for all the string before doing hash!!'''
 test_seed = "this is a group of words that should not be considered random anymore so never use this to generate a private key\n"
 
@@ -70,7 +72,7 @@ class BitCoinAddr():
 
         BTC_ADDR_STR = self.Base58Codec(sha_str)
         print(f'final address [{address_ver}]: {BTC_ADDR_STR}')
-        
+
         return BTC_ADDR_STR
 
 
@@ -95,6 +97,7 @@ def base58test(input_str: str = None):
     print(encoded1.decode())
 
 if __name__ == '__main__':   
+    print(DISCLAIM)
 
     # base58test()
 
