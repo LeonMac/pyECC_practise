@@ -84,8 +84,8 @@ def hexstr2byte(hex_str:str):
         >>> hexstr2byte('1a2b3c')
         b'\x1a+<'
     """
-    pdb.set_trace()
-    print(f"[hexstr2byte]: type of hex_str {type(hex_str)}")   
+    # pdb.set_trace()
+    # print(f"[hexstr2byte]: type of hex_str {type(hex_str)}")   
     if hex_str[:2] == '0x': 
 
         hex_string = hex_str[2:]
