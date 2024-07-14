@@ -1,5 +1,6 @@
 ##  generate bitcoin address  ##
 ## bitcoin address type explained : https://unchained.com/blog/bitcoin-address-types-compared/
+##  https://learnmeabitcoin.com/technical/script/
 ## plan to implement P2PKH, P2WPKH, P2SH, P2WSH
 
 
@@ -20,13 +21,19 @@ import pyECC as E
 
 import pdb
 
-support_ver = ['P2PKH', 'P2WPKH', 'P2SH']
+support_ver = ['P2PKH', 'P2SH', 'P2WPKH', 'P2WSH']
+
+prefix_dict = { 'P2PKH' : ['00', '6F'],  #mainnet # testnet
+                'P2SH'  : ['05', 'C4'],
+                }
+
+net_ver =['mainnet', 'testnet']
 
 class BitCoinAddr():
     '''Bitcoin Address Generator
        This is only for study but NOT for production, use it carefully
     '''
-    def __init__(self, addr_ver = 'P2PKH'):
+    def __init__(self, addr_ver: str = 'P2PKH'):
         self.sk1 = E.ECC_Curve(E.SECP256K1)
         assert addr_ver in support_ver, f"unsupport address version {addr_ver}"
         self.addr_ver = addr_ver
@@ -79,19 +86,22 @@ class BitCoinAddr():
         BTC_ADDR_STR = base58_code.decode()
         return BTC_ADDR_STR
 
-    def base58codeccheck(self, input_ = None):
-        print(f"construct address by using base58encode_check directly")
+    def base58codeccheck(self, input_ = None, net:str = 'testnet'):
+        assert net in net_ver, f"not valid net name {net}"
+        print(f"[{self.addr_ver}]: construct address by using base58encode_check directly")
+
         BTC_ADDR_STR = None
+        prefix = prefix_dict[self.addr_ver][0] if net=='mainnet' else prefix_dict[self.addr_ver][1]
 
         if self.addr_ver == 'P2PKH':
             compressed_pub_str = self.GenKeyPair(input_)
             pkh_byte = self.Hash160(compressed_pub_str)
-            BTC_ADDR_STR = self.Base58encode_check('00'+ hex(pkh_byte)[2:])
+            BTC_ADDR_STR = self.Base58encode_check(prefix + hex(pkh_byte)[2:])
         
         elif self.addr_ver == 'P2SH':
             assert input_ != None, f"you need input your reedeem_script for [{self.addr_ver}]"
             pksh_hash_byte = self.Hash160(input_)
-            BTC_ADDR_STR = self.Base58encode_check('05'+ hex(pksh_hash_byte)[2:])
+            BTC_ADDR_STR = self.Base58encode_check(prefix + hex(pksh_hash_byte)[2:])
 
         elif self.addr_ver == 'P2WPKH':
             print(f"Not implemented yet for [{self.addr_ver}]")
@@ -104,19 +114,22 @@ class BitCoinAddr():
         elif self.addr_ver == 'P2WSH':
             print(f"Not implemented yet for [{self.addr_ver}]")
         
-        print(f'final address [{self.addr_ver }]: {BTC_ADDR_STR}')
+        print(f'Final address [{self.addr_ver }][{net}] : {BTC_ADDR_STR}')
 
         return BTC_ADDR_STR
     
-    def base58codec(self, input_ = None):
+    def base58codec(self, input_ = None, net:str = 'testnet'):
         """construct by using checksum"""
-        print(f"construct address by using checksum")
+        assert net in net_ver, f"not valid net name {net}"
+        print(f"[{self.addr_ver}]: construct address by using checksum")
         BTC_ADDR_STR = None
+        prefix = prefix_dict[self.addr_ver][0] if net=='mainnet' else prefix_dict[self.addr_ver][1]
 
         if self.addr_ver == 'P2PKH':
+            
             compressed_pub_str = self.GenKeyPair(input_)
             first_part = self.Hash160(compressed_pub_str)
-            first_byte = hexstr2byte('00'+ hex(first_part)[2:])
+            first_byte = hexstr2byte(prefix+ hex(first_part)[2:])
             second_part = self.DoubleSha256(first_byte.hex())
             checksum_byte = hexstr2byte(hex(second_part)[2:10])
             BTC_ADDR_STR = self.Base58encode((first_byte+checksum_byte).hex())
@@ -124,7 +137,7 @@ class BitCoinAddr():
         elif self.addr_ver == 'P2SH':
             assert input_ != None, f"for [{self.addr_ver}], need input your reedeem_script, can not be None"
             first_part = self.Hash160(input_)
-            first_byte = hexstr2byte('05'+ hex(first_part)[2:])
+            first_byte = hexstr2byte(prefix+ hex(first_part)[2:])
             # print(f"first_byte = {first_byte.hex()}")
             second_part = self.DoubleSha256(first_byte.hex())
             checksum_byte = hexstr2byte(hex(second_part)[2:10])
@@ -142,14 +155,14 @@ class BitCoinAddr():
             # BTC_ADDR_STR = self.Base58Codec('05'+ hex(sha_byte)[2:])
         elif self.addr_ver == 'P2WSH':
             print(f"Not implemented yet for [{self.addr_ver}]")
-        
-        print(f'final address [{self.addr_ver }]: {BTC_ADDR_STR}')
+
+        print(f'Final address [{self.addr_ver }][{net}] : {BTC_ADDR_STR}')
 
         return BTC_ADDR_STR
     
-    def __call__(self, input_ = None):
-        self.base58codeccheck(input_)
-        self.base58codec(input_)
+    def __call__(self, input_ = None, testnet:str = 'testnet'):
+        self.base58codeccheck(input_, testnet)
+        self.base58codec(input_, testnet)
 
 
 def base58testvector(input_str: str = None):
@@ -177,24 +190,27 @@ if __name__ == '__main__':
     # input_hex_str= '003a38d44d6a0c8d0bb84e0232cc632b7e48c72e0e' #P2PKH TV
     # input_hex_str= '0582c11b43b312851b9813908ca3bda358794275f4' #P2SH TV
     # base58testvector(input_hex_str)
+
     # ref https://medium.com/coinmonks/how-to-generate-a-bitcoin-address-step-by-step-9d7fcbf1ad0b # not a fully correct blog, just take the test vector
     '''Note this is not good example as it implicitly add \n after for all the string before doing hash!!'''
     test_seed = "this is a group of words that should not be considered random anymore so never use this to generate a private key\n"
 
-    # print(f"for P2PKH we use this seed to create a ECC private key: {test_seed}")
+    print(f"[P2PKH] we use this seed to create a ECC private key: {test_seed}")
     sha256_p2pkh = hash_256(test_seed, 'str', 'hex', 'sha256')
 
     p2pkh = BitCoinAddr(addr_ver = 'P2PKH')
     p2pkh(sha256_p2pkh)
+    p2pkh(sha256_p2pkh, 'mainnet')
     print('**'*20)
 
     # #################################################
 
     reedeem_script = "this is a mock up transaction script, on priciple this would be something like '2 PubKey1 PubKey2 PubKey3 PubKey4 PubKey5 5 OP_CHECKMULTISIG', detail see https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html#p2sh" 
-    print(f"P2SH reedeem_script: {reedeem_script}")
+    print(f"[P2SH] reedeem_script: {reedeem_script}")
 
     p2sh = BitCoinAddr(addr_ver = 'P2SH')
     p2sh(reedeem_script)
+    p2sh(reedeem_script, 'mainnet')
 
     # p2wpkh  = BitCoinAddr(addr_ver = 'P2WPKH')
     # p2wpkh(None)
