@@ -3,12 +3,14 @@
 ##  https://learnmeabitcoin.com/technical/script/
 ## plan to implement P2PKH, P2WPKH, P2SH, P2WSH
 
+## https://github.com/rustyrussell/lightning-payencode/blob/master/lnaddr.py
+
 
 DISCLAIM = f"{'*'*56}\n* This is purely for personal fun; NEVER use it for    *\n* generating any address for your money transferring!! *\n{'*'*56}\n"
 
 import sys, os
-from typing import Any
 import base58
+from bech32 import bech32_encode, bech32_decode, CHARSET
 root_path = os.path.dirname(os.getcwd ())
 sys.path.append(root_path)
 
@@ -25,6 +27,8 @@ support_ver = ['P2PKH', 'P2SH', 'P2WPKH', 'P2WSH']
 
 prefix_dict = { 'P2PKH' : ['00', '6F'],  #mainnet # testnet
                 'P2SH'  : ['05', 'C4'],
+                'P2WPKH': ['bc0014', 'tb0014'],
+                'P2WSH' : ['bc0014', 'tb0014']                
                 }
 
 net_ver =['mainnet', 'testnet']
