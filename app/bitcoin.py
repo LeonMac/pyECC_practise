@@ -3,7 +3,7 @@
 ## plan to implement P2PKH, P2WPKH, P2SH, P2WSH
 
 
-DISCLAIM = 'This is purely for personal fun; never use it for generating any address for your money transferring.'
+DISCLAIM = f"{'*'*56}\n* This is purely for personal fun; NEVER use it for    *\n* generating any address for your money transferring!! *\n{'*'*56}\n"
 
 import sys, os
 from typing import Any
@@ -42,7 +42,7 @@ class BitCoinAddr():
 
         # print('ECDSA Private Key:', "0x{:064x}".format(priv))
         # print('ECDSA Public  Key:')
-        Pb.print_point('hex')
+        # Pb.print_point('hex')
 
         return Pb.hex_str(format='x', compress=True) if compressed else Pb.hex_str(format='xy', compress=False) 
     
