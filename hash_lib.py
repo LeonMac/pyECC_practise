@@ -1,3 +1,6 @@
+import hashlib
+from pysmx.SM3 import SM3   # https://gitee.com/snowlandltd/snowland-smx-python
+
 ###########################################################
 
 def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256'):
@@ -8,10 +11,10 @@ def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256')
     assert sha_type == 'sha256' or sha_type == 'sm3', f"not supported sha type = {sha_type}"
 
     if sha_type == 'sha256':
-        import hashlib
+        
         dig = hashlib.sha256()
     else:
-        from pysmx.SM3 import SM3   # https://gitee.com/snowlandltd/snowland-smx-python
+        
         dig = SM3()
     
     if msg_fmt == 'str':
@@ -29,7 +32,7 @@ def hash_256(message , msg_fmt = 'str', return_fmt = 'hex', sha_type = 'sha256')
 
 
 def hash_512(message: str):
-    import hashlib
+
     """Returns the SHA256 hash of the provided message string."""
     dig = hashlib.sha512()
     dig.update( message.encode() ) # convert str to bytes
@@ -46,7 +49,7 @@ def hash_test(msg):
 if __name__ == '__main__':
     # https://docs.python.org/3/library/subprocess.html#subprocess.run
     # https://the-x.cn/hash/ShangMi3Algorithm.aspx
-    
+
     import random
     import subprocess
     from log import log
