@@ -3,8 +3,9 @@
 import hashlib
 import json
 from time import time
-import requests
+from bc_cfg import PORT, get_path, get_method
 
+import requests
 from flask import Flask, request, jsonify
 import uuid
 
@@ -187,7 +188,7 @@ node_identifier = str(uuid.uuid4()).replace('-', '')
 # Instantiate the Blockchain
 blockchain = Blockchain()
 
-@app.route('/mine', methods=['GET'])
+@app.route(get_path('mine'), methods=[get_method('mine')])
 def mine():
     # We run the proof of work algorithm to get the next proof...
     last_block = blockchain.last_block
@@ -214,7 +215,7 @@ def mine():
     }
     return jsonify(response), 200
 
-@app.route('/transactions/new', methods=['POST'])
+@app.route(get_path('trx_new'), methods=[get_method('trx_new')])
 def new_transaction():
     values = request.get_json()
 
@@ -229,7 +230,7 @@ def new_transaction():
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
 
-@app.route('/chain', methods=['GET'])
+@app.route(get_path('chk_chain'), methods=[get_method('chk_chain')])
 def full_chain():
     response = {
         'chain': blockchain.chain,
@@ -238,7 +239,7 @@ def full_chain():
     return jsonify(response), 200
 
 
-@app.route('/nodes/register', methods=['POST'])
+@app.route(get_path('node_reg'), methods=[get_method('node_reg')])
 def register_nodes():
     values = request.get_json()
 
@@ -255,7 +256,7 @@ def register_nodes():
     }
     return jsonify(response), 201
 
-@app.route('/nodes/resolve', methods=['GET'])
+@app.route(get_path('node_reslv'), methods=[get_method('node_reslv')])
 def consensus():
     replaced = blockchain.resolve_conflicts()
 
@@ -278,4 +279,4 @@ def consensus():
 if __name__ == '__main__':
 
 
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=PORT)
