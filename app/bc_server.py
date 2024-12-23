@@ -3,7 +3,7 @@
 import hashlib
 import json
 from time import time
-from bc_cfg import PORT, get_path, get_method
+from bc_cfg import IP, PORT, get_path, get_method
 
 import requests
 from flask import Flask, request, jsonify
@@ -16,8 +16,13 @@ class Blockchain:
         self.nodes = set()
 
         # Create the genesis block
-
         self.new_block(previous_hash=1, proof=100)
+    
+    def register_node(self, node):
+        # print(f'tbd node : {node}')
+        # print(self.nodes)
+        self.nodes.add(node)
+        pass
 
     def new_block(self, proof, previous_hash=None):
         """
@@ -105,7 +110,7 @@ class Blockchain:
         return proof
     
     @staticmethod
-    def valid_proof(last_proof, proof, difficulty):
+    def valid_proof(last_proof, proof, difficulty:int =4):
         """
         Validates the Proof
 
@@ -189,15 +194,17 @@ node_identifier = str(uuid.uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 @app.route(get_path('mine'), methods=[get_method('mine')])
-def mine():
+def mine(worker_id:str ='0'):
+    '''A route to mine a new block.'''
     # We run the proof of work algorithm to get the next proof...
     last_block = blockchain.last_block
     proof = blockchain.proof_of_work(last_block)
 
     # We must receive a reward for finding the proof.
     # The sender is "0" to signify that this node has mined a new coin.
+    print(f"miner {worker_id} find the proof after {proof} hashes")
     blockchain.new_transaction(
-        sender="0",
+        sender=worker_id,
         recipient=node_identifier,
         amount=1,
     )
@@ -217,6 +224,7 @@ def mine():
 
 @app.route(get_path('trx_new'), methods=[get_method('trx_new')])
 def new_transaction():
+    '''A route to create a new transaction.'''
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
@@ -232,6 +240,7 @@ def new_transaction():
 
 @app.route(get_path('chk_chain'), methods=[get_method('chk_chain')])
 def full_chain():
+    '''A route to return the full blockchain.'''
     response = {
         'chain': blockchain.chain,
         'length': len(blockchain.chain),
@@ -241,6 +250,8 @@ def full_chain():
 
 @app.route(get_path('node_reg'), methods=[get_method('node_reg')])
 def register_nodes():
+    '''A route allows nodes to register with the server and add them 
+    to the list of nodes in the network'''
     values = request.get_json()
 
     nodes = values.get('nodes')
@@ -258,6 +269,8 @@ def register_nodes():
 
 @app.route(get_path('node_reslv'), methods=[get_method('node_reslv')])
 def consensus():
+    '''route implements the consensus algorithm and resolves any conflicts 
+    by replacing the current chain with the longest valid chain in the network.'''
     replaced = blockchain.resolve_conflicts()
 
     if replaced:
@@ -279,4 +292,4 @@ def consensus():
 if __name__ == '__main__':
 
 
-    app.run(host='0.0.0.0', port=PORT)
+    app.run(host='127.0.0.1', port=PORT)
