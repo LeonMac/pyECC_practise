@@ -3,7 +3,7 @@
 import hashlib
 import json
 from time import time
-from bc_cfg import IP, PORT, get_path, get_method
+from bc_cfg import IP, PORT, POW_MINING_FEE, get_path, get_method
 
 import requests
 from flask import Flask, request, jsonify
@@ -184,10 +184,11 @@ class Blockchain:
             return True
 
         return False
-  
+
+# start a Flask server
 app = Flask(__name__)
 
-# Generate a globally unique address for this node
+# Generate a globally unique address for this server node
 node_identifier = str(uuid.uuid4()).replace('-', '')
 
 # Instantiate the Blockchain
@@ -204,9 +205,9 @@ def mine(worker_id:str ='0'):
     # The sender is "0" to signify that this node has mined a new coin.
     print(f"miner {worker_id} find the proof after {proof} hashes")
     blockchain.new_transaction(
-        sender=worker_id,
-        recipient=node_identifier,
-        amount=1,
+        sender = worker_id,
+        recipient = node_identifier,
+        amount = POW_MINING_FEE,
     )
 
     # Forge the new Block by adding it to the chain
@@ -287,9 +288,5 @@ def consensus():
     return jsonify(response), 200    
 
 
-
-
 if __name__ == '__main__':
-
-
-    app.run(host='127.0.0.1', port=PORT)
+    app.run(host=IP, port=PORT)

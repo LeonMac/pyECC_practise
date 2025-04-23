@@ -17,10 +17,7 @@ if __name__ == "__main__":
         print(f"your input argument {sys.argv[1] } is not recognized!")
         sys.exit(1)
     
-    method  = get_method(sys.argv[1])
-    arg_url = get_path(sys.argv[1])
     value = sys.argv[2]
-    
       
     if sys.argv[1] == 'trx_new':            # Create a new transaction
         json_body = {
@@ -43,6 +40,9 @@ if __name__ == "__main__":
     else:
 
         pass
+
+    method  = get_method(sys.argv[1])
+    arg_url = get_path(sys.argv[1])
             
     # url = 'http://localhost:5000' + arg_url
     url = 'http://'+ IP + ':' + str(PORT) + arg_url

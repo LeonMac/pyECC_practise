@@ -9,6 +9,7 @@ chain_act_dict={
 
 IP = '127.0.0.1'
 PORT = 5000
+POW_MINING_FEE = 1
 
 act_list = list(chain_act_dict.keys())
 

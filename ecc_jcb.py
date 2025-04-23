@@ -58,6 +58,6 @@
 #             print ("\n")
 #             return (self.X , self.Y , self.Z, self.p)
 
-class JCB_ECC():
-    def __init__(self, a, b, n, p, G:JCB_ECP, curve_id, name):
-        pass
+# class JCB_ECC():
+#     def __init__(self, a, b, n, p, G:JCB_ECP, curve_id, name):
+#         pass
