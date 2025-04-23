@@ -203,7 +203,7 @@ def mine(worker_id:str ='0'):
 
     # We must receive a reward for finding the proof.
     # The sender is "0" to signify that this node has mined a new coin.
-    print(f"miner {worker_id} find the proof after {proof} hashes")
+    print(f"[MSG] miner {worker_id} find the proof after {proof} hashes")
     blockchain.new_transaction(
         sender = worker_id,
         recipient = node_identifier,
@@ -236,7 +236,7 @@ def new_transaction():
     # Create a new Transaction
     index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
 
-    response = {'message': f'Transaction will be added to Block {index}'}
+    response = {'message': f'Transaction {values} will be added to Block {index}'}
     return jsonify(response), 201
 
 @app.route(get_path('chk_chain'), methods=[get_method('chk_chain')])
@@ -255,15 +255,14 @@ def register_nodes():
     to the list of nodes in the network'''
     values = request.get_json()
 
-    nodes = values.get('nodes')
-    if nodes is None:
+    node_name = values.get('nodes')
+    if node_name is None:
         return "Error: Please supply a valid list of nodes", 400
 
-    for node in nodes:
-        blockchain.register_node(node)
+    blockchain.register_node(node_name)
 
     response = {
-        'message': 'New nodes have been added',
+        'message': f'New node {node_name} have been added',
         'total_nodes': list(blockchain.nodes),
     }
     return jsonify(response), 201

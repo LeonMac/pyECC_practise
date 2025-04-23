@@ -9,19 +9,19 @@ pip install -r requirements.txt
 ## What are implemented
 
 ### low level (common)
-- EC Point class (in ecp.py, including affine coordinate and jacobian coordinate)
-- EC Curve class and Point Operation on curve
+- EC Point class (ecp.py, including affine coordinate and jacobian coordinate)
+- EC Curve class and Point Operation on curve (ecc.py)
 
-### ECC application standard
+### ECC standard supported
 - NIST: secp256k1/secp256r1
 - SM: sm2
 
-## Application demo:
+## ECC core function test:
+- pyECC.py
 - Signature gen/verify (NIST and SM)
 - EDCH (NIST and SM)
 - Message encryption/decryption (SM so far)
 
-## How to run demo tests
 ```shell
 cd path_of_project
 python pyECC.py
@@ -30,14 +30,12 @@ python pyECC.py
 ## config
 find the config parameters in config.py
 
-### switch-over between affine coordinate and jacobian coordinate
 ```shell
-USE_JCB = True   # jacobian coordinate
-USE_JCB = False  # affine coordinate
-```
-### enable/disable the timing test
-```shell
-TIMING_MEASURE = True  # enable(True)/disable(False) timing test
+USE_JCB = True / False   # True: jacobian coordinate, False: affine coordinate
+TIMING_MEASURE = True / False  # enable(True)/disable(False) timing test
+DEBUG = True / False # config for debug decorator in support.py
+ADD_FMT = 'hex' / 'dec' # define what address format to be shown, 'hex' or 'dec'
+LOG_SHOW_CFG : change LOG info level, toggle True/False
 ```
 ---
 
@@ -91,5 +89,49 @@ Prover DisHonest test--> 10 rounds:
 total 10 rounds test, zkp dis-honest count = 4, Prover dishonest probability = 0.9375
 Prover Honest test--> 10 rounds: honest count = 10
 Prover DisHonest test--> 10 rounds: honest count = 0
+```
+
+## A bitcoin address generator (TBD)
+```shell
+$ python bitcoin.py 
+```
+
+## A blockchain toy example
+
+Refer to the post: https://bimoputro.medium.com/build-your-own-blockchain-in-python-a-practical-guide-f9620327ed03
+
+support 5 operations : minging, issue transaction, register node, consensus (PoW by hash), check chain status.
+
+```shell
+# install the pckage for networking:
+pip install -r app_request.txt
+
+# further goto app/blockchain folder
+cd app/blockchain
+
+# bring-up the blockchain server:
+$ python bc_server.py 
+
+# open a new terminal for blockchain client operations
+# mining: 
+python bc_client.py mine x
+{'index': 2, 'message': 'New Block Forged', 'previous_hash': 'ffc2c16cb724ecb6510ff37c301df249cd7eb9f537d2094c560189de6f66fe63', 'proof': 61249, 'transactions': [{'amount': 1, 'recipient': '378c3fa53e1649b6bd2c82c9e8f1657a', 'sender': '0'}]}
+
+# issue transaction
+python bc_client.py trx_new 1
+{'message': "Transaction {'sender': 'Alice', 'recipient': 'Bob', 'amount': '1'} will be added to Block 2"}
+
+# register node
+python bc_client.py node_reg miner2
+{'message': 'New node miner2 have been added', 'total_nodes': ['xzy', 'miner2', 'miner1']}
+
+# run consensus
+python bc_client.py node_reslv 1
+{'chain': [{'index': 1, 'previous_hash': 1, 'proof': 100, 'timestamp': 1745392208.7034159, 'transactions': []}], 'message': 'Our chain is authoritative'}
+
+# check chain status
+python bc_client.py chk_chain z
+{'chain': [{'index': 1, 'previous_hash': 1, 'proof': 100, 'timestamp': 1745392208.7034159, 'transactions': []}], 'length': 1}
+
 ```
 

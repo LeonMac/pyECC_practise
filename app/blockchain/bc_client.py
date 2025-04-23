@@ -15,6 +15,7 @@ if __name__ == "__main__":
     if sys.argv[1] not in act_list:
         usage_msg(sys.argv[0])
         print(f"your input argument {sys.argv[1] } is not recognized!")
+        print(f"only accpet these arguments: {act_list}")
         sys.exit(1)
     
     value = sys.argv[2]
@@ -37,8 +38,10 @@ if __name__ == "__main__":
         json_body = {
             'nodes': str(value),
         }
-    else:
+    elif sys.argv[1] == 'node_reslv': 
+        json_body = ''
 
+    else:
         pass
 
     method  = get_method(sys.argv[1])
@@ -53,4 +56,4 @@ if method == 'POST':
 elif method == 'GET':
     response = requests.get(url, json=json_body)
 
-print(response.json())
+print(f"{response.json()}")

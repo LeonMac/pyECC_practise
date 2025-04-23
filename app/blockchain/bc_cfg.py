@@ -2,8 +2,8 @@ chain_act_dict={
     'mine':      ['/mine'  ,'GET'],
     'chk_chain': ['/chain' ,'GET'], 
     'node_reg':  ['/nodes/register' ,'POST'],
-    'trx_new':   ['/transactions/new' , 'POST'],
     'node_reslv':['/nodes/resolve' , 'GET'],
+    'trx_new':   ['/transactions/new' , 'POST'],
     
 }
 
