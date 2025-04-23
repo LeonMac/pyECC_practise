@@ -2,13 +2,16 @@
 ### Global Config
 import sys
 
-
+## global config 
 USE_JCB = False  # gobal config for jacobian (True) or affine (False)
 
 TIMING_MEASURE = True # config for Timing test (True) or Not (False) in support.py
 
 DEBUG = False # config for debug decorator in support.py
 
+ADD_FMT = 'hex' # define what address format to be shown, 'hex' or 'dec'
+
+# what kinds log to be shown
 LOG_SHOW_CFG = {
 'LOG_I' : False,     #INFO
 'LOG_M' : False,     #MESSAGE,

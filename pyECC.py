@@ -17,14 +17,14 @@ SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
 SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
 SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 
-from config import USE_JCB
+from config import USE_JCB, ADD_FMT
 
 if USE_JCB:
     from ecp import ECP_JCB as ECP
-    log_method = 'jacobian'
+
 else:
     from ecp import ECP_AFF as ECP
-    log_method = 'affine'
+
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
@@ -99,7 +99,7 @@ class ECC_Curve ():
         if (verb):
             log('d', f"given privkey = 0x%064x" %(k) )
             log('d', "Generated Pubkey:" )
-            Pubkey.print_point(log_method)
+            Pubkey.print_point(ADD_FMT)
         
         return Pubkey
 
@@ -338,9 +338,9 @@ class ECC_Curve ():
             hex_show('Msg Hex: ', M_Byte.hex())
             log('d', f"given k_rand = 0x%064x" %(k) )
             log('d', "Generated Point C1:" )
-            C1.print_point(log_method)
+            C1.print_point(ADD_FMT)
             log('d', "Generated Point kPb:" )
-            kPb.print_point(log_method)
+            kPb.print_point(ADD_FMT)
             # print(f"x2 ∥ M ∥ y2 hex byte = {Z_bytes}")
             # hex_show(f"x2 ∥ M ∥ y2 hex byte = ", Z_bytes.hex())
             hex_show(f"Z_kdf type {type(Z_kdf)}", Z_kdf)
@@ -414,9 +414,9 @@ class ECC_Curve ():
             hex_show(f"C3", C3)
             hex_show(f"C1, length = {len(C1_x)}", C1_x)
             hex_show(f"C2, length = {len(C1_y)}", C1_y)
-            C1.print_point(log_method)
+            C1.print_point(ADD_FMT)
             log('d', "Generated Point dC1:" )
-            dC1.print_point(log_method)
+            dC1.print_point(ADD_FMT)
             hex_show(f"t, type {type(t)} ", t.bytes.hex())
             hex_show(f"C2, type {type(C2)} ", C2)
             hex_show(f"M_ type {type(M_str)} ", M_str)
@@ -516,7 +516,7 @@ def ECDH_unit_test(curve_id, test_round):
 CURVE_LIST = [SECP256K1, SECP256R1, SM2_CV_ID]
 
 @timing_log
-def ECC_unit_test (curve_id:int, format = log_method):
+def ECC_unit_test (curve_id:int, format = ADD_FMT):
     '''unit test for Point_Add Point_Double
        result can be compared with http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html
     '''
@@ -626,8 +626,8 @@ def Point_Addition_HE_test (curve_id, test_round):
             test_pass +=1
         else:
             log('e', f"Test round %d of %d fail" %(i, test_round))
-            kG_0.print_point(log_method)
-            kG_1.print_point(log_method)
+            kG_0.print_point(ADD_FMT)
+            kG_1.print_point(ADD_FMT)
 
         i+=1
     log('m', f"Total test round %d, %d pass" %(test_round, test_pass))

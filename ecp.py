@@ -123,7 +123,7 @@ class ECP_JCB():
         return ECP_JCB( (self.X, (self.p - self.Y) % self.p, self.Z), self.p)
 
     # @debug_control
-    def print_point(self, format='affine'): 
+    def print_point(self, format:str ='affine'): 
         if self.is_Unit_Point():
             print("this is an Unit Point!")
 
