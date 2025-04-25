@@ -5,7 +5,7 @@ sys.path.append(root_path)
 
 from random import SystemRandom
 rand = SystemRandom()
-from ecc import ECP
+from ec.ecc import ECP
 import pyECC as E
 # from log import log, hex_show
 

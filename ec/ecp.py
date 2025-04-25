@@ -1,11 +1,11 @@
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
-import modulo
-from log import log
-from support import debug_control
+import core.modulo as modulo
+from tools.log import log
 
 ###################################################
+
 
 class ECP_AFF:
     ''' EC point class, affine coordinate'''
@@ -38,7 +38,7 @@ class ECP_AFF:
         ret = (self.x_, self.p - self.y_)
         return ECP_AFF(ret, self.p)
 
-    # @debug_control
+
     def print_point(self, format:str = 'hex'):
         if format == 'hex':
             log('d', f"Point.x(affine): {hex( self.x_ )}" )
@@ -48,6 +48,7 @@ class ECP_AFF:
             log('d', f"Point.y(affine): {self.y_ }")
         else:
             log('w', f"unkown format signature {format}")
+
 
     
     def hex_str(self, format='xy', compress = False):

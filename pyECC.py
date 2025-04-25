@@ -4,13 +4,13 @@
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
-from log import log, hex_show
-from log import print_divider as log_div
+from tools.log import log, hex_show
+from tools.log import print_divider as log_div
 
-import modulo
+import core.modulo as modulo
 
-from ecc import ECC
-from support import timing_log
+from ec.ecc import ECC
+from tools.support import timing_log
 
 SECP256K1 = 714 # openssl curve_id for secp256k1
 SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
@@ -20,10 +20,10 @@ SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 from config import USE_JCB, ADD_FMT
 
 if USE_JCB:
-    from ecp import ECP_JCB as ECP
+    from ec.ecp import ECP_JCB as ECP
 
 else:
-    from ecp import ECP_AFF as ECP
+    from ec.ecp import ECP_AFF as ECP
 
 
 class ECC_Curve ():
@@ -298,8 +298,8 @@ class ECC_Curve ():
     def SM2_Encryption(self, M:str, Pb, k_in, ver: str ='c1c3c2', verb: bool = False):
         '''SM2 spec., Part 4, 6.1'''
         assert ver in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{ver}"
-        import support
-        import hash_lib as hash
+        import tools.support as support
+        from core import hash_lib as hash
 
         if k_in == None:
             k = rand.randint( 1, self.n-1 )   # A1
@@ -356,9 +356,9 @@ class ECC_Curve ():
    
     def SM2_Decryption(self, C:str, d: int, ver: str ='c1c3c2', verb: bool = False):
         assert ver in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{ver}"
-        import support
+        import tools.support as support
         from bitstring import Bits
-        import hash_lib as hash
+        from core import hash_lib as hash
 
         key_byte_len = 256 // 8 # 32bytes
         C_byte_len = len(C) // 2
@@ -436,7 +436,7 @@ class ECC_Curve ():
 @timing_log
 def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
     ''' signature generate and verify test '''
-    from hash_lib import hash_256 as sha256
+    from core.hash_lib import hash_256 as sha256
     log_div('line', 1)
     log('m', f"Signature generate+signature verify test, plan to run {test_round} rounds")
     curve_ins = ECC_Curve(curve_id)

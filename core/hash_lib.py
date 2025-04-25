@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     import random
     import subprocess
-    from log import log
+    from tools.log import log
     msg_dict = ['I love you', 'blablabla', 'abc', str(random.randint(1, 1<<256 -1))]
     test_cnt = len(msg_dict)
     pass_cnt = 0

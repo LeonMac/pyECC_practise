@@ -3,15 +3,15 @@
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
-import modulo
-from log import log
+import core.modulo as modulo
+from tools.log import log
 
 from config import USE_JCB
 
 if USE_JCB:
-    from ecp import ECP_JCB as ECP
+    from ec.ecp import ECP_JCB as ECP
 else:
-    from ecp import ECP_AFF as ECP
+    from ec.ecp import ECP_AFF as ECP
 
 
 class ECC:

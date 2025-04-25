@@ -59,13 +59,16 @@ def modular_exp_inv(a, m):
 	''' compute the multiplicative inverse, by doing python native modulo exponentiation'''
 	return pow(a, m-2, m)
 
+def lcm (a, b):
+    return abs(a*b)/half_extended_gcd(a, b)
+
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
 
 def mod_sqrt_unittest (iteration):
     
     m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-    import log as hlp
+    import tools.log as hlp
     iter = 0
     pass_test = 0
     while iter < iteration:
@@ -91,7 +94,7 @@ def mod_sqrt_unittest (iteration):
 def mod_inv_unittest (iteration):
     x = rand.randint(1, (1<<256)-1 )
     m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-    import log as hlp
+    import tools.log as hlp
     iter = 0
     pass_test = 0
     while iter < iteration:

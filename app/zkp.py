@@ -7,11 +7,11 @@ sys.path.append(root_path)
 
 # 3.1 Zero Knowledge Proof of Discrete Logarithm with Coin Flip
 import pyECC as ECC
-from ecc import ECP
+from ec.ecc import ECP
 from random import SystemRandom
 rand = SystemRandom()
 
-import hash_lib as hash
+from core import hash_lib as hash
 
 
 class zkp_tool():

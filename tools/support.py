@@ -1,4 +1,4 @@
-from log import log
+from tools.log import log
 
 from decimal import Decimal
 from config import TIMING_MEASURE, DEBUG
@@ -53,7 +53,7 @@ def NIST_KDM(Z:bytes, L: int, FixedInfo:bytes) -> int:
     log('w', f"This function is not yet been tested!!!")
 
     from bitstring import Bits
-    from hash_lib import hash_256
+    from core.hash_lib import hash_256
     H_outputBits    = 256       # given we use hash256
     max_H_inputBits = 512-56       # restric input length to one hash
 
@@ -109,7 +109,7 @@ def SM2_KDF(Z, klen: int, dgest_type = 'sha256', input_fmt = 'str', return_fmt =
 
     
     from bitstring import Bits
-    import hash_lib as hash
+    from core import hash_lib as hash
     import struct
 
     if input_fmt == 'str':
