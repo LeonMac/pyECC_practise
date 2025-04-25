@@ -4,7 +4,7 @@ import functools
 from tools.log import log
 
 from decimal import Decimal
-from config import TIMING_MEASURE, DEBUG
+from config import TIMING_MEASURE
 
 
 ## timing decorator
@@ -26,19 +26,19 @@ def timing_log(func):
     return wrapper
 
 ## debug_decorator
-def debug_control(func):
-    """decoration for debug stuff"""
+# def debug_control(func):
+#     """decoration for debug stuff"""
 
-    if DEBUG:
+#     if DEBUG:
 
-        def do_debug_stuff(self, *args, **kwargs):
-            func(self, *args, **kwargs)
-            pass
+#         def do_debug_stuff(self, *args, **kwargs):
+#             func(self, *args, **kwargs)
+#             pass
 
-        return do_debug_stuff
+#         return do_debug_stuff
     
-    else:
-        pass
+#     else:
+#         pass
 
 # https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Cr2.pdf
 # pip install bitstring if not 

@@ -33,7 +33,6 @@ find the config parameters in config.py
 ```shell
 USE_JCB = True / False   # True: jacobian coordinate, False: affine coordinate
 TIMING_MEASURE = True / False  # enable(True)/disable(False) timing test
-DEBUG = True / False # config for debug decorator in support.py
 ADD_FMT = 'hex' / 'dec' # define what address format to be shown, 'hex' or 'dec'
 LOG_SHOW_CFG : change LOG info level, toggle True/False
 ```

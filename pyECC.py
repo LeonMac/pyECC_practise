@@ -252,10 +252,10 @@ class ECC_Curve ():
             rv = (e + R.x_) % self.n
 
         if rv == r:
-            print("signature verify Pass")
+            log('m', "signature verify Pass")
             return True
         else:
-            print("signature verify Fail")
+            log('e', "signature verify Fail")
             return False
 
 
@@ -591,7 +591,7 @@ def Curve_unit_test (curve_id):
     curve_ins = ECC_Curve(curve_id)
 
     k = rand.randint(1, curve_ins.n-1 )
-    log('m', "Pubkey gen unit test:")
+    log('m', "Pubkey gen unit test")
     log('d', "PrivKey = 0d%d" %(k) )
     Pubkey = curve_ins.PubKey_Gen(k, True)
     log_div('line', 1)
@@ -708,7 +708,7 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = 
             else:
                 log('e', f"test round {i+1}/{test_rounds} failed!")
 
-        log('m', f"total run {test_rounds}, pass {test_pass} rounds")
+        log('m', f"SM2_EN_DE_Test total run {test_rounds}, pass {test_pass} rounds")
 
 
     
