@@ -4,6 +4,15 @@ rand = SystemRandom()   # cryptographic random byte generator
 import core.modulo as modulo
 from tools.log import log
 
+def num_format(num:int, format:str = 'hex'):
+    if format == 'hex':
+        return hex( num )
+    elif format == 'dec':
+        return num
+    else:
+        log('w', f"unkown format requested {format}, use hex.")
+        return hex( num )
+
 ###################################################
 
 
@@ -40,15 +49,11 @@ class ECP_AFF:
 
 
     def print_point(self, format:str = 'hex'):
-        if format == 'hex':
-            log('d', f"Point.x(affine): {hex( self.x_ )}" )
-            log('d', f"Point.y(affine): {hex( self.y_ )}" )
-        elif format == 'dec':
-            log('d', f"Point.x(affine): {self.x_ }") 
-            log('d', f"Point.y(affine): {self.y_ }")
-        else:
-            log('w', f"unkown format signature {format}")
+        if self.is_Unit_Point():
+            log('d', "this is an Unit Point!" )
 
+        log('d', f"Point.x(affine): {num_format( self.x_ , format)}" )
+        log('d', f"Point.y(affine): {num_format( self.y_ , format)}" )
 
     
     def hex_str(self, format='xy', compress = False):
@@ -111,7 +116,6 @@ class ECP_JCB():
 
     def is_Unit_Point(self):
         '''JCB point Unit point'''
-        # if self.X % self.p == 0 and self.Y % self.p == 0:
         return ( (self.get_x() == 0 ) and  (self.get_y() ==  0)  )
 
     def is_reverse(self, P):
@@ -123,28 +127,29 @@ class ECP_JCB():
     def neg_point(self):
         return ECP_JCB( (self.X, (self.p - self.Y) % self.p, self.Z), self.p)
 
-    # @debug_control
-    def print_point(self, format:str ='affine'): 
+    def print_point(self, format:str = 'hex'):
         if self.is_Unit_Point():
-            print("this is an Unit Point!")
+            log('d', "this is an Unit Point!" )
+        x_a = self.get_x()
+        y_a = self.get_y()
 
-        if (format == 'affine') :
+        log('d', f"Point.x(affine): {num_format( x_a , format)}" )
+        log('d', f"Point.y(affine): {num_format( y_a , format)}" )
+
+    def print_point_jcb(self, cord:str ='affine'): #TODO: make jcb and affine into a same func?
+
+        if (cord == 'affine') :
             x_a = self.get_x()
             y_a = self.get_y()
             log('d', f"Point.x(affine): {hex( x_a )}" )
             log('d', f"Point.y(affine): {hex( y_a )}" )
 
-            # return ECP_AFF ( (x_a, y_a) , self.p)
 
         elif (format == 'jacobian'):
-            # print("Point.X(Jacob):  ", hex( self.X ) )
-            # print("Point.Y(Jacob):  ", hex( self.Y ) )
-            # print("Point.Z(Jacob):  ", hex( self.Z ) )
             log('d', f"Point.X(Jacob):  {hex( self.X )}" )
             log('d', f"Point.Y(Jacob):  {hex( self.Y )}" )
             log('d', f"Point.Z(Jacob):  {hex( self.Z )}" )
         
-            # return ECP_JCB ((self.X , self.Y , self.Z), self.p)
         else:
             log('w', f"unkown format signature {format}")
         print ("\n")

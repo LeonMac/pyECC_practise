@@ -21,9 +21,11 @@ from config import USE_JCB, ADD_FMT
 
 if USE_JCB:
     from ec.ecp import ECP_JCB as ECP
+    cord = 'jacobian'
 
 else:
     from ec.ecp import ECP_AFF as ECP
+    cord = 'affine'
 
 
 class ECC_Curve ():
