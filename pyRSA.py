@@ -68,4 +68,5 @@ def rsaDemo(M: str):
     print(f"DEC : {M_recov}")
 
 
-recov = rsaDemo('this is a test')
+M = input("Input the message you want to encrypt by using RSA:")
+recov = rsaDemo(M)
