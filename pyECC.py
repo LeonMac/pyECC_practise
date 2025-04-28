@@ -3,6 +3,7 @@
 #import random
 from random import SystemRandom
 rand = SystemRandom()   # cryptographic random byte generator
+from bitstring import Bits
 
 from tools.log import log, hex_show
 from tools.log import print_divider as log_div
@@ -12,10 +13,8 @@ import core.modulo as modulo
 from ec.ecc import ECC
 from tools.support import timing_log
 
-SECP256K1 = 714 # openssl curve_id for secp256k1
-SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
-SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
-SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
+import tools.support as support
+from core import hash_lib as hash
 
 from config import USE_JCB, ADD_FMT
 
@@ -27,6 +26,10 @@ else:
     from ec.ecp import ECP_AFF as ECP
     cord = 'affine'
 
+SECP256K1 = 714 # openssl curve_id for secp256k1
+SECP256R1 = 415 # openssl curve_id for secp256r1=prime256v1
+SM2_CV_ID = 123 # openssl curve_id for sm2, to be confirmed
+SM2_TV_ID = 124 # a temp assigned curve id for sm2 test vector
 
 class ECC_Curve ():
     ''' instance implement of ECC libarary '''
@@ -300,8 +303,6 @@ class ECC_Curve ():
     def SM2_Encryption(self, M:str, Pb, k_in, ver: str ='c1c3c2', verb: bool = False):
         '''SM2 spec., Part 4, 6.1'''
         assert ver in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{ver}"
-        import tools.support as support
-        from core import hash_lib as hash
 
         if k_in == None:
             k = rand.randint( 1, self.n-1 )   # A1
@@ -358,9 +359,7 @@ class ECC_Curve ():
    
     def SM2_Decryption(self, C:str, d: int, ver: str ='c1c3c2', verb: bool = False):
         assert ver in ('c1c2c3', 'c1c3c2'), f"incorrect output format :{ver}"
-        import tools.support as support
-        from bitstring import Bits
-        from core import hash_lib as hash
+
 
         key_byte_len = 256 // 8 # 32bytes
         C_byte_len = len(C) // 2
@@ -438,19 +437,16 @@ class ECC_Curve ():
 @timing_log
 def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
     ''' signature generate and verify test '''
-    from core.hash_lib import hash_256 as sha256
     log_div('line', 1)
     log('m', f"Signature generate+signature verify test, plan to run {test_round} rounds")
     curve_ins = ECC_Curve(curve_id)
 
     i = 0
     test_pass = 0
-    # msg = "This is a masterpiece from Tiger.Tang"
-    # dig = sha256(msg)
 
     while i < test_round: 
         msg = str(rand.randint(1, curve_ins.n-1 ))
-        dig = sha256(msg)
+        dig = hash.hash_256(msg)
 
         priv_key = rand.randint(1, curve_ins.n-1 )
         randk    = rand.randint(1, curve_ins.n-1 )
@@ -464,11 +460,6 @@ def Sig_Verify_unit_test(curve_id:int, test_round:int, ):
             if curve_ins.NIST_Sig_Verify(r,s,z,x,y):
                 test_pass+=1
 
-        # pub_key  = curve_ins.PubKey_Gen(priv_key, verb=False)
-        # P = (x,y)
-        # if not pub_key.is_equal(ECP(P, curve_ins.p)):
-        #     log('w', "Pubkey is different!")
-        
         i+=1
     
     log('m', f"Signature generate+signature verify test round %d, %d pass" %(test_round, test_pass))
@@ -718,9 +709,6 @@ def SM2_EN_DE_Test(cid:int, test_rounds: int = 1 , ver = 'c1c3c2', verb: bool = 
 if __name__ == '__main__':
     iter = 10
     log('m', "For check deatil, enable LOG_I/LOG_D option in config.py, and compare the result with online tools : http://www-cs-students.stanford.edu/~tjw/jsbn/ecdh.html")
-    # import timeit
-
-    # from support import timing
 
  
     for cid in CURVE_LIST: # iterate all curves
